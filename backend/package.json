@@ -11,13 +11,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/db/migrate-cli.ts",
     "demo": "tsx src/index.ts"
   },
   "dependencies": {
-    "decimal.js": "10.4.3"
+    "decimal.js": "10.4.3",
+    "pg": "8.23.1"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
+    "@types/pg": "8.23.1",
+    "pg-mem": "3.0.14",
     "tsx": "4.16.2",
     "typescript": "5.5.3",
     "vitest": "1.6.0"

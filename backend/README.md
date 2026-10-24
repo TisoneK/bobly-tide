@@ -5,15 +5,16 @@ See the [build spec](../bobly-tide-build-spec.md) (§5 data model, §6 the
 hourly engine, §10 money-correctness rules, §14 build steps) and the
 [product spec](../bobly-tide-spec.md) for the business rules.
 
-Stack: Node + TypeScript + PostgreSQL (ADR-4). This first cut is
-framework-light on purpose — the money engine is pure, fully tested, and
-carries no HTTP or database coupling. NestJS (API), the Postgres
-repository, and M-Pesa come next.
+Stack: Node + TypeScript + PostgreSQL (ADR-4). The money engine is pure
+and framework-light; Postgres persistence is wired via a load-run-persist
+unit of work (ADR-6) so the engine stays synchronous and testable. NestJS
+(API) and M-Pesa come next.
 
 ## Layout
 
 ```
-db/schema.sql          Postgres schema (§5) — NUMERIC(14,4) money, append-only ledger
+db/migrations/         versioned SQL migrations (0001_init = schema §5)
+src/db/migrate.ts      migration runner; migrate-cli.ts applies $DATABASE_URL
 src/domain/money.ts    exact decimal money (decimal.js), never float
 src/domain/types.ts    entities, ledger entry types, PLATFORM_WALLET
 src/domain/ledger.ts   balanceOf(entries) — the one definition of a balance
@@ -22,20 +23,44 @@ src/domain/holds.ts    security-hold sizing, funding, draw, release (§8.1)
 src/domain/defaults.ts default handling + slot refill (§8.2-8.3)
 src/domain/packages.ts the Daily package (24 members, KES 1/hr, 5%)
 src/repo/types.ts      LedgerRepo interface + DuplicateKeyError
-src/repo/memory.ts     in-memory ledger (tests + demo)
+src/repo/memory.ts     in-memory ledger (pure engine, tests, snapshots)
+src/repo/pg.ts         PgLedgerRepo — durable Postgres ledger store
+src/pg-settlement.ts   unit of work: run the pure engine on a PG snapshot
 src/seed.ts            build a funded test group
 src/index.ts           demo: one full cycle (npm run demo)
-test/                  money + engine tests (money-correctness)
+test/                  money / engine / holds / defaults / pg integration
 ```
 
 ## Run
 
 ```bash
 npm install
-npm test          # money-correctness suite (13 tests)
+npm test          # full suite (28 tests, incl. Postgres via in-process pg-mem)
 npm run typecheck
 npm run demo      # settle one full Daily cycle and print balances
 ```
+
+Against a real database:
+
+```bash
+DATABASE_URL=postgres://user:pass@host:5432/bobly npm run migrate
+```
+
+## Database
+
+- **Migrations.** `db/migrations/*.sql`, applied in filename order, each in
+  its own transaction, tracked in `schema_migrations`. `runMigrations(pool)`
+  is idempotent; `npm run migrate` applies them to `$DATABASE_URL`.
+- **PgLedgerRepo** (`src/repo/pg.ts`) is the durable append-only ledger:
+  `appendEntries` (one transaction, rejects duplicate idempotency keys),
+  `balanceOf` (summed exactly with decimal.js), `entriesForAccount`, and
+  `loadSnapshot` for the unit of work.
+- **Unit of work** (`src/pg-settlement.ts`): `settleHourOnPg` loads the
+  group's accounts into an in-memory snapshot, runs the pure `settleHour`,
+  and writes the new entries back in one transaction — idempotent, with the
+  ledger's `UNIQUE(idempotency_key)` as the concurrency backstop.
+- **Tests** run against **pg-mem** (in-process Postgres — no Docker or
+  server) and the same code runs on real Postgres.
 
 ## What the engine guarantees
 
@@ -74,9 +99,11 @@ npm run demo      # settle one full Daily cycle and print balances
 
 ## Not built yet (next steps, build spec §14)
 
-- Postgres `LedgerRepo` implementation (schema is in `db/schema.sql`).
 - NestJS HTTP API, M-Pesa Daraja (STK push + B2C), auth/OTP.
-- The hourly scheduler that calls `settleHour` once per group per hour.
+- The hourly scheduler that calls `settleHourOnPg` once per group per hour.
+- Incremental hold release (see the note above); a materialised wallet
+  balance if the ledger grows large.
 
 > Note: `npm audit` reports advisories in the **dev** toolchain
-> (vitest/esbuild/tsx). Production dependencies (`decimal.js`) report zero.
+> (vitest/esbuild/tsx/pg-mem). Production dependencies (`decimal.js`, `pg`)
+> report zero.

@@ -11,8 +11,10 @@ Business rules (fees, packages, holds, legal) are **not** restated here —
 they live in the product spec and this spec points at them.
 
 > **Status:** in build. Foundational decisions locked (§1) and the §13
-> build decisions locked 2026-10-24. The backend skeleton and hourly
-> engine (§14 steps 1–2) live in [`backend/`](backend/).
+> build decisions locked 2026-10-24. Live in [`backend/`](backend/): the
+> hourly engine (§6), the security-hold mechanism (§8, ADR-5), and
+> PostgreSQL persistence with migrations (ADR-6) — §14 steps 1–2 plus the
+> database, all covered by an integration suite.
 
 ---
 
@@ -320,11 +322,11 @@ spec consumes them as config, it does not decide them.
 
 ## 14. First build steps (once D1–D2 are set)
 
-1. Stand up the backend skeleton + Postgres schema (§5) with the ledger
-   and the invariant test (§10, §11).
-2. Build the hourly engine (§6) against a seeded test group — money math
-   and idempotency first, before any UI.
-3. Daraja sandbox top-up + B2C (§7) behind the wallet.
+1. ✅ Backend skeleton + Postgres schema/migrations (§5) with the ledger
+   and the invariant tests (§10, §11) — `backend/`.
+2. ✅ Hourly engine (§6) + security holds (§8) against a seeded group, with
+   PostgreSQL persistence (unit of work, ADR-6) and an integration suite.
+3. Daraja sandbox top-up + B2C (§7) behind the wallet, and the NestJS API.
 4. Flutter app: sign-up/OTP, package screen, queue, group/turn view,
    wallet + receipts, notifications.
 5. Wire gates (`gates.conf`), run a full-cycle scenario test, then the
