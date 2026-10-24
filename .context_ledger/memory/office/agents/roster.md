@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Built security-hold mechanism (sizing, draw, release, default, slot refill) on the engine | Working | 23 tests green; engine + holds done. Next: Postgres repo, M-Pesa |
+| Mara | S002 | claude-opus-4-8 | Wired PostgreSQL persistence (PgLedgerRepo, migrations, unit of work) under the engine | Working | 28 tests green; engine+holds+Postgres done. Next: NestJS API + M-Pesa |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,

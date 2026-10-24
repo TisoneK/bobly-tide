@@ -14,4 +14,4 @@ entry and backlog before starting.
 
 - **Session:** 2026-10-24 — Mara (S002) / claude-opus-4-8 (Claude Code)
 - **Task:** Fill build/design spec gaps, then start the build. Added `bobly-tide-build-spec.md`; locked Flutter / closed-pilot Daily / deep sea blue (ADR-1..3) and backend = Node+TS+Postgres (ADR-4). Built the money ledger + hourly settlement engine skeleton in `backend/` (build spec §14 steps 1-2).
-- **Status:** in-progress — hourly engine + security-hold mechanism built (holds.ts: sizing (N−p)×c, fund/draw/release; defaults.ts: default refund + slot refill; ADR-5). 23 money-correctness tests green, typecheck clean, demo runs a full cycle with holds. Next: Postgres `LedgerRepo`, then NestJS API + M-Pesa Daraja (build spec §14 steps 3-5).
+- **Status:** in-progress — engine + holds + PostgreSQL persistence done. PgLedgerRepo (repo/pg.ts), migrations + runner (db/migrations, src/db/migrate.ts), and a load-run-persist unit of work (pg-settlement.ts, ADR-6) run the pure engine on a real DB. 28 tests green (5 pg integration tests on in-process pg-mem), typecheck clean. Next: NestJS API + M-Pesa Daraja + hourly scheduler (build spec §14 step 3).
