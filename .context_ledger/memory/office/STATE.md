@@ -5,7 +5,7 @@ at check-in and at exit. This is a DERIVED VIEW for fast orientation;
 open the file a line points at when your task needs more than the
 line gives you. Full reading order: ledger-schema.md. -->
 
-_Regenerated: 2026-10-24T20:05:35Z_
+_Regenerated: 2026-10-24T20:12:35Z_
 
 ## Standing params
 - **Core:** 2.2.0 (locked, verified 2026-10-24)
@@ -15,7 +15,7 @@ _Regenerated: 2026-10-24T20:05:35Z_
 - Full params: `memory/workflows/active.md`
 
 ## Office — who's in, right now
-(office empty — no live roster rows)
+- **Mara** (S002) — Working — Filling spec gaps in bobly-tide-spec.md (brand, project type, MVP, etc.)
 
 ## Current task
 - **2026-10-24 — Imani (S001) / claude-opus-4-8 (Claude Code)** — First `.context_ledger` session — initialize project memory (user, preferences, workflows/active.md, system, tasks, sessions) following t… — *done — memory initialized; no product work started yet (spec-only repo). Next session: begin the build per `bobly-tide-spec.md`.*
