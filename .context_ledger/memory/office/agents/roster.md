@@ -52,7 +52,6 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Imani | S001 | claude-opus-4-8 | First session: initialize `.context_ledger` project memory | Working | Phase 2 check-in; about to fill memory/ (user, workflows, system, tasks, sessions) |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,

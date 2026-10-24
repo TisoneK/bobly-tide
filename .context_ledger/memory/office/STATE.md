@@ -5,20 +5,20 @@ at check-in and at exit. This is a DERIVED VIEW for fast orientation;
 open the file a line points at when your task needs more than the
 line gives you. Full reading order: ledger-schema.md. -->
 
-_Regenerated: 2026-10-24T20:03:44Z_
+_Regenerated: 2026-10-24T20:05:35Z_
 
 ## Standing params
 - **Core:** 2.2.0 (locked, verified 2026-10-24)
-- **Target:** —
-- **Scope:** —
-- **Push policy:** —
+- **Target:** general sweep (a target in the chat message overrides this)
+- **Scope:** discovery + review + fix all safe issues
+- **Push policy:** push to `main` directly after each commit
 - Full params: `memory/workflows/active.md`
 
 ## Office — who's in, right now
-- **Imani** (S001) — Working — First session: initialize `.context_ledger` project memory
+(office empty — no live roster rows)
 
 ## Current task
-- **—** — none — no session in progress — *idle*
+- **2026-10-24 — Imani (S001) / claude-opus-4-8 (Claude Code)** — First `.context_ledger` session — initialize project memory (user, preferences, workflows/active.md, system, tasks, sessions) following t… — *done — memory initialized; no product work started yet (spec-only repo). Next session: begin the build per `bobly-tide-spec.md`.*
 
 ## Backlog — High priority (the top of the queue)
 (none)
