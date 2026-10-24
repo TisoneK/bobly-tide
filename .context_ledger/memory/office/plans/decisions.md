@@ -32,3 +32,10 @@ relitigating them. To reverse one, append a new ADR that supersedes it.
 - **Context:** The product spec's Brand section (§11) defined voice and name but no visual identity; a primary color was needed to start design.
 - **Decision:** Primary = deep sea blue (`#0B3D62`), with `tide #19B5C9` secondary and `payout #F5A623` warm accent proposed (build spec §9, open as D4–D5).
 - **Consequences:** The app and brand lead with deep sea blue; it must stay distinct from typical bank blues (trust is the product) and meet WCAG AA. Full token set lives in the build spec §9.
+
+---
+## ADR-4: Backend is Node + TypeScript + PostgreSQL (2026-10-24)
+- **Status:** accepted
+- **Context:** Build spec §13-D1 left the backend language open (Dart / Node-NestJS / Python-FastAPI). The user locked the §13 defaults and asked to start the build, so one had to be chosen. The money ledger and hourly settlement need exact decimal math, serialisable transactions, and a reliable job runner — all three languages qualify; the deciding signal was the local toolchain (modern Node v24.17.0 present; system Python only 3.9.6).
+- **Decision:** Backend in Node + TypeScript with PostgreSQL. The pilot skeleton is framework-light (pure domain engine + tests) with `decimal.js` for exact money; NestJS is added at the HTTP/API-layer step, not before. The remaining §13 defaults (D2 hosting TBD, D3 Riverpod, D4 fonts, D5 accent colors, D6 SMS provider, D7 ops console read-mostly, D8 business placeholders) are locked as proposed.
+- **Consequences:** Money columns use exact decimal (`NUMERIC(14,4)` in Postgres, `decimal.js` in code) — never floats. The hourly tick is server-authoritative and idempotent per `(group, hour)`. Future agents build on TypeScript + Postgres; a different backend language needs a superseding ADR.
