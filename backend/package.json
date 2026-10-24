@@ -12,18 +12,30 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx src/db/migrate-cli.ts",
+    "start": "tsx src/main.ts",
     "demo": "tsx src/index.ts"
   },
   "dependencies": {
+    "@nestjs/common": "12.2.0",
+    "@nestjs/core": "12.2.0",
+    "@nestjs/platform-express": "12.2.0",
     "decimal.js": "10.4.3",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@nestjs/testing": "12.2.0",
     "@types/node": "20.14.9",
     "@types/pg": "8.23.1",
+    "@types/supertest": "7.2.1",
     "pg-mem": "3.0.14",
+    "supertest": "7.3.1",
     "tsx": "4.16.2",
     "typescript": "5.5.3",
     "vitest": "1.6.0"
+  },
+  "overrides": {
+    "multer": "2.5.0"
   }
 }

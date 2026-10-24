@@ -5,10 +5,10 @@ See the [build spec](../bobly-tide-build-spec.md) (§5 data model, §6 the
 hourly engine, §10 money-correctness rules, §14 build steps) and the
 [product spec](../bobly-tide-spec.md) for the business rules.
 
-Stack: Node + TypeScript + PostgreSQL (ADR-4). The money engine is pure
-and framework-light; Postgres persistence is wired via a load-run-persist
-unit of work (ADR-6) so the engine stays synchronous and testable. NestJS
-(API) and M-Pesa come next.
+Stack: Node + TypeScript + PostgreSQL + NestJS (ADR-4). The money engine is
+pure; Postgres persistence is a load-run-persist unit of work (ADR-6) so the
+engine stays synchronous and testable; the HTTP API and hourly scheduler sit
+on top (ADR-7). M-Pesa Daraja comes next.
 
 ## Layout
 
@@ -26,16 +26,19 @@ src/repo/types.ts      LedgerRepo interface + DuplicateKeyError
 src/repo/memory.ts     in-memory ledger (pure engine, tests, snapshots)
 src/repo/pg.ts         PgLedgerRepo — durable Postgres ledger store
 src/pg-settlement.ts   unit of work: run the pure engine on a PG snapshot
+src/scheduler.ts       settleDueHours — which hours are due for a group
+src/api/               NestJS app: controllers, GroupStore, scheduler service
+src/main.ts            bootstrap (migrate, ensure package, listen)
 src/seed.ts            build a funded test group
 src/index.ts           demo: one full cycle (npm run demo)
-test/                  money / engine / holds / defaults / pg integration
+test/                  money / engine / holds / defaults / pg / api / scheduler
 ```
 
 ## Run
 
 ```bash
 npm install
-npm test          # full suite (28 tests, incl. Postgres via in-process pg-mem)
+npm test          # full suite (37 tests, incl. Postgres via in-process pg-mem)
 npm run typecheck
 npm run demo      # settle one full Daily cycle and print balances
 ```
@@ -44,6 +47,7 @@ Against a real database:
 
 ```bash
 DATABASE_URL=postgres://user:pass@host:5432/bobly npm run migrate
+DATABASE_URL=postgres://user:pass@host:5432/bobly npm start   # API on :3000
 ```
 
 ## Database
@@ -97,13 +101,34 @@ DATABASE_URL=postgres://user:pass@host:5432/bobly npm run migrate
 > returns the rest); incremental release would just keep more money in the
 > spendable wallet mid-cycle.
 
+## HTTP API + scheduler (NestJS)
+
+Token-based DI only (this toolchain emits no decorator metadata). Endpoints:
+
+| Method + path | Does |
+|---|---|
+| `POST /groups` | Create a Daily group (`filling`) |
+| `POST /groups/:id/join` | Add a member (creates user + wallet); returns `walletId` |
+| `POST /wallets/:id/topup` | Internal/dev credit (stands in for M-Pesa until §7) |
+| `POST /groups/:id/start` | Fund every member's hold, activate, stamp `start_at` |
+| `POST /groups/:id/settle-due` | Settle any hours due now (same path the scheduler uses) |
+| `GET /groups/:id` | State, start time, members + balances, platform fee total |
+| `GET /wallets/:id` | Balance + entry history |
+
+The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
+on an interval: for each active group it settles every hour that has come
+due (`dueMaxHour` from `start_at`), idempotently, and on the final hour
+releases holds and marks the group completed. The "hour" duration is
+configurable (`HOUR_MS`) so a pilot or a test can run accelerated time.
+
 ## Not built yet (next steps, build spec §14)
 
-- NestJS HTTP API, M-Pesa Daraja (STK push + B2C), auth/OTP.
-- The hourly scheduler that calls `settleHourOnPg` once per group per hour.
+- M-Pesa Daraja (STK push top-up + B2C withdrawal), auth/OTP — the top-up
+  endpoint is an internal placeholder until then.
 - Incremental hold release (see the note above); a materialised wallet
   balance if the ledger grows large.
 
 > Note: `npm audit` reports advisories in the **dev** toolchain
-> (vitest/esbuild/tsx/pg-mem). Production dependencies (`decimal.js`, `pg`)
-> report zero.
+> (vitest/esbuild/tsx/pg-mem). Production dependencies report zero (multer,
+> pulled in transitively by NestJS, is pinned to a patched 2.5.0 via an
+> `overrides` entry; the API has no file uploads).
