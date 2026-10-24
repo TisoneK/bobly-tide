@@ -10,9 +10,9 @@ marked and collected in [§13 Open build decisions](#13-open-build-decisions).
 Business rules (fees, packages, holds, legal) are **not** restated here —
 they live in the product spec and this spec points at them.
 
-> **Status:** draft for review. Three foundational decisions are locked
-> (platform, MVP scope, brand primary color — see §1). The rest are
-> proposed defaults awaiting confirmation.
+> **Status:** in build. Foundational decisions locked (§1) and the §13
+> build decisions locked 2026-10-24. The backend skeleton and hourly
+> engine (§14 steps 1–2) live in [`backend/`](backend/).
 
 ---
 
@@ -293,21 +293,21 @@ once the project toolchain exists).
 
 ---
 
-## 13. Open build decisions
+## 13. Build decisions (locked 2026-10-24)
 
-Confirm these before the build starts in earnest. Each has a proposed
-default so work is not blocked; flag any you want changed.
+Locked by the user on 2026-10-24 ("lock the proposed defaults"). Each can
+still be revisited with a superseding ADR, but the build proceeds on these.
 
-| ID | Decision | Proposed default |
+| ID | Decision | Locked value |
 |---|---|---|
-| **D1** | Backend language/framework | A server with Postgres; language open — Dart, Node/NestJS, or Python/FastAPI. **Recommendation: pick based on team strength; all meet the money/scheduler constraints.** |
-| **D2** | Hosting provider + region | Managed container or VPS in a region near Daraja; provider TBD. |
+| **D1** | Backend language/framework | **Node + TypeScript + PostgreSQL** (ADR-4). Pilot skeleton is framework-light (pure domain engine + tests, `decimal.js` for money); NestJS added at the HTTP/API step. |
+| **D2** | Hosting provider + region | Managed container/VPS in a region near Daraja; specific provider still TBD at deploy time. |
 | **D3** | State management (Flutter) | Riverpod. |
 | **D4** | Typography | Plus Jakarta Sans (display) + Inter (body). |
 | **D5** | Accent colors beyond primary | `tide #19B5C9` secondary + `payout #F5A623` warm accent. |
-| **D6** | SMS provider | A KE-reachable provider (e.g. Africa's Talking) — confirm. |
+| **D6** | SMS provider | A KE-reachable provider (e.g. Africa's Talking) — final pick at integration. |
 | **D7** | Ops console scope for pilot | Read-mostly dashboard first; write actions as needed. |
-| **D8** | Push minimum (business, from product spec §16) | 5% fee, KES 50 withdrawal min, 6-hour grace — still placeholders to confirm. |
+| **D8** | Push minimum (business, from product spec §16) | 5% fee, KES 50 withdrawal min, 6-hour grace — externalised as config; business confirmation still owned by product spec §16. |
 
 Business-level decisions (fee %, packages, turn-position rules, money
 holder, renewal, ID level) remain owned by the product spec §16 — this
