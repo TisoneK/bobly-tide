@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Filling spec gaps in bobly-tide-spec.md (brand, project type, MVP, etc.) | Working | Phase 2 check-in |
+| Mara | S002 | claude-opus-4-8 | Filling build/design spec gaps (added build spec; locked Flutter / closed-pilot MVP / deep sea blue) | Working | Build spec committed; awaiting user confirm on open decisions |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,

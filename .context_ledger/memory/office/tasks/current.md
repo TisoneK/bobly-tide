@@ -12,6 +12,6 @@ entry and backlog before starting.
 - **Status:** in-progress | done | blocked (<blocker>)
 -->
 
-- **Session:** 2026-10-24 — Imani (S001) / claude-opus-4-8 (Claude Code)
-- **Task:** First `.context_ledger` session — initialize project memory (user, preferences, workflows/active.md, system, tasks, sessions) following the kickoff
-- **Status:** done — memory initialized; no product work started yet (spec-only repo). Next session: begin the build per `bobly-tide-spec.md`.
+- **Session:** 2026-10-24 — Mara (S002) / claude-opus-4-8 (Claude Code)
+- **Task:** Fill build/design spec gaps the business spec deferred. Added `bobly-tide-build-spec.md` (platform, MVP cut, architecture, data model, hourly engine, M-Pesa, visual identity, testing, open decisions); locked platform=Flutter, MVP=closed-pilot Daily package, primary color=deep sea blue (ADR-1..3).
+- **Status:** done — build spec drafted and committed; decisions recorded. Awaiting user confirmation on open build decisions (build spec §13). Next: once D1 (backend) / D2 (hosting) are set, begin the backend skeleton + hourly engine per build spec §14.
