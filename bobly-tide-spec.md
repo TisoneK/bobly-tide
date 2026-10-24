@@ -2,7 +2,7 @@
 
 **Bobly Tide is an online chama where every member puts in KES 1 an hour, and each hour the whole pot goes to one member, minus a small platform fee.** Members choose a package by group size. The group size sets how big the payout is and how long the wait for a turn is.
 
-This spec covers WHAT the product is and how the business runs. HOW it gets built is left to the Developer agent through the .context protocol.
+This spec covers WHAT the product is and how the business runs. HOW it gets built lives in the companion [`bobly-tide-build-spec.md`](bobly-tide-build-spec.md) (platform, MVP cut, architecture, data model, hourly engine, M-Pesa, visual identity).
 
 ---
 
