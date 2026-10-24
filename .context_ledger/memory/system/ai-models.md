@@ -22,6 +22,7 @@ its work accordingly).
 
 | Agent | Model | First seen | Last seen | Sessions |
 |---|---|---|---|---|
+| Claude Code | claude-opus-4-8 | 2026-10-24 | 2026-10-24 | 1 |
 
 ## Observations
 
@@ -32,3 +33,7 @@ Update in place when a newer session contradicts an old observation.
 <!-- TEMPLATE — one bullet per observation:
 - **<agent> / <model>:** <what was observed — concrete and checkable, e.g. "Read tool truncates files >500 lines; needs offset/limit", "SSRF fix shipped with regression test, verified green"> (YYYY-MM-DD)
 -->
+
+- **Claude Code / claude-opus-4-8:** Exact model ID is stated in the harness system prompt (`claude-opus-4-8`), so it is recorded as fact rather than inferred from a marketing name. (2026-10-24)
+- **Claude Code / claude-opus-4-8:** Bootstrapped the ledger and self-verified it — `ledger-sync verify` green at core 2.2.0 — then completed first-session memory initialization end to end in one session. (2026-10-24)
+- **Claude Code / claude-opus-4-8:** The guard `tool-check` hook blocks piping a `ledger-gates` verdict through `tail`/`head`/`grep`; gates must be run bare. Worth remembering to avoid a blocked command. (2026-10-24)

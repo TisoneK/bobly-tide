@@ -12,6 +12,6 @@ entry and backlog before starting.
 - **Status:** in-progress | done | blocked (<blocker>)
 -->
 
-- **Session:** —
-- **Task:** none — no session in progress
-- **Status:** idle
+- **Session:** 2026-10-24 — Imani (S001) / claude-opus-4-8 (Claude Code)
+- **Task:** First `.context_ledger` session — initialize project memory (user, preferences, workflows/active.md, system, tasks, sessions) following the kickoff
+- **Status:** done — memory initialized; no product work started yet (spec-only repo). Next session: begin the build per `bobly-tide-spec.md`.

@@ -27,17 +27,17 @@ user changes the rules; note the change in your session entry.
 - **Gates:** `.context_ledger/memory/workflows/gates.conf` — checkpoint before each next action; `pre-commit`, `integration`, and `exit` gates are mandatory
 -->
 
-- **Protocol:** —
-- **Protocol location:** —
-- **Package upstream:** —
-- **Since:** —
-- **Default role:** —
-- **Scope:** —
-- **Target:** —
-- **Focus areas:** —
-- **Findings handling:** —
-- **Push policy:** —
-- **Commit style:** —
-- **Commit granularity:** —
-- **Deliverable:** —
-- **Gates:** —
+- **Protocol:** by agent type — local agents → `.context_ledger/core/rules/ai-engineering-protocol-local.md`; cloud/sandbox agents → `.context_ledger/core/rules/ai-engineering-protocol.md`
+- **Protocol location:** on disk — vendored in `.context_ledger/core/` (no network fetch needed; version in `.context_ledger/core/VERSION` = 2.2.0, last verified in `../core.lock`)
+- **Package upstream:** https://github.com/TisoneK/context-ledger.git
+- **Since:** 2026-10-24
+- **Default role:** engineer — unless a session says otherwise; see `.context_ledger/core/roles/`
+- **Scope:** discovery + review + fix all safe issues
+- **Target:** general sweep (a target in the chat message overrides this)
+- **Focus areas:** all — security, performance, UX, architecture, testing, docs
+- **Findings handling:** fix safe issues; flag architectural changes for approval
+- **Push policy:** push to `main` directly after each commit
+- **Commit style:** Conventional Commits with scope; `chore(ledger):` for this directory, `docs(review):` for reports
+- **Commit granularity:** one logical change per commit
+- **Deliverable:** report in `.context_ledger/memory/office/reviews/` + chat summary
+- **Gates:** `.context_ledger/memory/workflows/gates.conf` (mode=hybrid, no explicit project commands yet) — checkpoint before each next action; `pre-commit`, `integration`, and `exit` gates are mandatory

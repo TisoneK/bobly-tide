@@ -46,10 +46,16 @@ Format: - <preference> — <how to apply it> (provenance, YYYY-MM-DD)
 
 ## Workflow
 
+- Push to `main` directly after each commit — no PRs required for routine work (pre-flight)
+- One logical change per commit (pre-flight)
+- Conventional Commits with a scope; `chore(ledger):` for `.context_ledger/` memory, `docs(review):` for reports (pre-flight)
+
 ## Communication
 
 ## Code style
 
 ## Review depth
+
+- Fix safe issues directly; flag architectural changes for approval before acting (pre-flight)
 
 ## Risk & approvals
