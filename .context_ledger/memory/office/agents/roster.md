@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Wired PostgreSQL persistence (PgLedgerRepo, migrations, unit of work) under the engine | Working | 28 tests green; engine+holds+Postgres done. Next: NestJS API + M-Pesa |
+| Mara | S002 | claude-opus-4-8 | Built the NestJS HTTP API + hourly settlement scheduler over the engine | Working | 37 tests green; API+scheduler done. Next: M-Pesa Daraja, Flutter client |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
