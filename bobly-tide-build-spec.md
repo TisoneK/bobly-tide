@@ -152,8 +152,11 @@ The heart of the product. For an active group of N members, once per hour:
 6. **Advance:** mark the turn done; the next hour belongs to the next
    member in join order. After hour N-1 the cycle completes.
 7. **Shortfall path:** if a member's wallet can't cover the KES 1 debit,
-   apply the grace rule (product spec §8.2); after grace, draw from their
-   security hold and flag for default.
+   draw the gap from their security hold (product spec §8.1); only when
+   wallet and hold together fall short is it a true shortfall. Hold sizing,
+   funding, draw, release, default and slot-refill are implemented in
+   `backend/src/domain/holds.ts` and `defaults.ts` (grace-period timing and
+   SMS warnings from §8.2 arrive with the scheduler/notifications later).
 
 Fee rounding: the platform earns exactly KES 0.05 per member per hour.
 Fractions accumulate in `NUMERIC` and settle to the organisation daily

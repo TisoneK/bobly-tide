@@ -9,6 +9,7 @@ import {
   type Package,
   type WalletId,
 } from './types';
+import { holdAccountId, holdAvailable } from './holds';
 import type { LedgerRepo } from '../repo/types';
 
 export interface SettleDeps {
@@ -26,6 +27,9 @@ export interface SettlementResult {
   fee: Money;
   payout: Money;
   entries: LedgerEntry[];
+  /** Members whose hourly contribution was covered (wholly or partly) by a
+   *  draw from their security hold this hour. */
+  heldDraws: { membershipId: MembershipId; amount: Money }[];
 }
 
 /** One member could not cover the hourly contribution. In the full system
@@ -117,6 +121,7 @@ export function settleHour(
       fee,
       payout,
       entries: [],
+      heldDraws: [],
     };
   }
 
@@ -129,22 +134,65 @@ export function settleHour(
     throw new InvalidHourError(hourIndex, pkg.size);
   }
 
-  // No member may be debited into the red. The hold would cover a shortfall
-  // in the full system; here we refuse so the pot never comes up short.
-  const short = active
-    .map((m) => ({ m, balance: repo.balanceOf(m.walletId) }))
-    .filter(({ balance }) => balance.lessThan(pkg.hourlyContribution))
-    .map(({ m, balance }) => ({
-      membershipId: m.id,
-      walletId: m.walletId,
-      balance,
-      needed: pkg.hourlyContribution,
-    }));
+  // Cover each member's contribution: spendable wallet first, then draw the
+  // gap from their security hold (product spec §8.1–8.3). It is a true
+  // shortfall only when wallet AND hold together cannot cover the hour — the
+  // engine then refuses rather than post a short pot.
+  const c = pkg.hourlyContribution;
+  const drawEntries: LedgerEntry[] = [];
+  const heldDraws: { membershipId: MembershipId; amount: Money }[] = [];
+  const short: {
+    membershipId: MembershipId;
+    walletId: WalletId;
+    balance: Money;
+    needed: Money;
+  }[] = [];
+
+  for (const m of active) {
+    const walletBal = repo.balanceOf(m.walletId);
+    if (walletBal.gte(c)) continue; // wallet covers it
+
+    const deficit = c.minus(walletBal);
+    const avail = holdAvailable(repo, m.id);
+    const draw = avail.gte(deficit) ? deficit : avail;
+
+    if (draw.isZero() || walletBal.plus(draw).lessThan(c)) {
+      short.push({ membershipId: m.id, walletId: m.walletId, balance: walletBal, needed: c });
+      continue;
+    }
+
+    // Unlock `draw` from the hold into the wallet; the hourly_debit below
+    // then takes the contribution from the (now sufficient) wallet.
+    drawEntries.push(
+      {
+        id: idGen(),
+        walletId: m.walletId,
+        type: 'hold_release',
+        amount: draw,
+        groupId: group.id,
+        hourIndex,
+        idempotencyKey: `${key}:holddraw:${m.id}:wallet`,
+        createdAt: now,
+      },
+      {
+        id: idGen(),
+        walletId: holdAccountId(m.id),
+        type: 'hold_release',
+        amount: draw.negated(),
+        groupId: group.id,
+        hourIndex,
+        idempotencyKey: `${key}:holddraw:${m.id}:hold`,
+        createdAt: now,
+      },
+    );
+    heldDraws.push({ membershipId: m.id, amount: draw });
+  }
+
   if (short.length > 0) {
     throw new ShortfallError(short);
   }
 
-  const entries: LedgerEntry[] = [];
+  const entries: LedgerEntry[] = [...drawEntries];
 
   for (const m of active) {
     entries.push({
@@ -199,6 +247,7 @@ export function settleHour(
     fee,
     payout,
     entries,
+    heldDraws,
   };
 }
 
