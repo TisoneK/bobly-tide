@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Wired M-Pesa Daraja top-up/withdrawal (callback-as-truth) into the wallet | Working | 45 tests green; M-Pesa done. Next: auth/OTP, Flutter client |
+| Mara | S002 | claude-opus-4-8 | Built phone+OTP auth (session tokens, AuthGuard) over the API | Working | 55 tests green; backend §14 step 3 done. Next: Flutter client |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
