@@ -14,9 +14,9 @@ they live in the product spec and this spec points at them.
 > build decisions locked 2026-10-24. Live in [`backend/`](backend/): the
 > hourly engine (§6), the security-hold mechanism (§8, ADR-5), PostgreSQL
 > persistence with migrations (ADR-6), a NestJS HTTP API + hourly scheduler
-> (ADR-7), and M-Pesa Daraja top-up/withdrawal with callback-as-truth
-> (§7, ADR-8) — §14 steps 1–3, all covered by a 45-test suite. Next:
-> auth/OTP and the Flutter client.
+> (ADR-7), M-Pesa Daraja top-up/withdrawal with callback-as-truth (§7,
+> ADR-8), and phone + OTP auth guarding the API (§8, ADR-9) — §14 steps
+> 1–3, all covered by a 55-test suite. Next: the Flutter client.
 
 ---
 
@@ -329,9 +329,10 @@ spec consumes them as config, it does not decide them.
 2. ✅ Hourly engine (§6) + security holds (§8) against a seeded group, with
    PostgreSQL persistence (unit of work, ADR-6) and an integration suite.
 3. ✅ NestJS HTTP API over the engine/wallet + the hourly scheduler
-   (ADR-7), and M-Pesa Daraja top-up (STK push) + withdrawal (B2C) with
-   callback-as-truth into the wallet (§7, ADR-8), replacing the internal
-   dev top-up. Still to do here: auth/OTP.
+   (ADR-7), M-Pesa Daraja top-up (STK push) + withdrawal (B2C) with
+   callback-as-truth (§7, ADR-8), and phone + OTP auth issuing session
+   tokens and guarding the group/wallet routes (§8, ADR-9). Follow-up:
+   per-resource ownership checks and tying a join to the authed user.
 4. Flutter app: sign-up/OTP, package screen, queue, group/turn view,
    wallet + receipts, notifications.
 5. Wire gates (`gates.conf`), run a full-cycle scenario test, then the

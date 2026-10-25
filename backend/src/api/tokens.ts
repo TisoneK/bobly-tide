@@ -9,6 +9,10 @@ export const DARAJA_CLIENT = Symbol('DARAJA_CLIENT');
 export const MPESA_STORE = Symbol('MPESA_STORE');
 export const MPESA_CONFIG = Symbol('MPESA_CONFIG');
 export const MPESA_SERVICE = Symbol('MPESA_SERVICE');
+export const AUTH_STORE = Symbol('AUTH_STORE');
+export const AUTH_SERVICE = Symbol('AUTH_SERVICE');
+export const AUTH_CONFIG = Symbol('AUTH_CONFIG');
+export const SMS_SENDER = Symbol('SMS_SENDER');
 
 export interface SchedulerConfig {
   /** Start the background interval. Off in tests (they drive ticks directly). */

@@ -1,8 +1,10 @@
-import { Controller, Get, Inject, Param } from '@nestjs/common';
+import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
 import type { PgLedgerRepo } from '../repo/pg';
+import { AuthGuard } from './auth.guard';
 import { LEDGER_REPO } from './tokens';
 
 @Controller('wallets')
+@UseGuards(AuthGuard)
 export class WalletsController {
   constructor(@Inject(LEDGER_REPO) private readonly repo: PgLedgerRepo) {}
 

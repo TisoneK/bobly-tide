@@ -1,14 +1,16 @@
-import { Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import { fundGroupHolds } from '../domain/holds';
 import { PLATFORM_WALLET, type Package } from '../domain/types';
 import { accountIdsForGroup, withLedger } from '../pg-settlement';
 import type { PgLedgerRepo } from '../repo/pg';
 import { settleDueHours } from '../scheduler';
+import { AuthGuard } from './auth.guard';
 import { GroupNotJoinableError, type GroupStore } from './group.store';
 import { toHttp } from './errors';
 import { GROUP_STORE, LEDGER_REPO, PACKAGE, SCHEDULER_CONFIG, type SchedulerConfig } from './tokens';
 
 @Controller('groups')
+@UseGuards(AuthGuard)
 export class GroupsController {
   constructor(
     @Inject(LEDGER_REPO) private readonly repo: PgLedgerRepo,

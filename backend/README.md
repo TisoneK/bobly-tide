@@ -9,7 +9,8 @@ Stack: Node + TypeScript + PostgreSQL + NestJS (ADR-4). The money engine is
 pure; Postgres persistence is a load-run-persist unit of work (ADR-6) so the
 engine stays synchronous and testable; the HTTP API and hourly scheduler sit
 on top (ADR-7); M-Pesa (Daraja) moves real money in and out on the
-confirming callback (ADR-8). Auth/OTP and the Flutter client come next.
+confirming callback (ADR-8); phone + OTP auth issues session tokens and
+guards the API (§8, ADR-9). The Flutter client comes next.
 
 ## Layout
 
@@ -31,7 +32,8 @@ src/scheduler.ts       settleDueHours — which hours are due for a group
 src/mpesa/daraja.ts    DarajaClient: interface + Fake (tests/dev) + Http (real)
 src/mpesa/mpesa.store.ts   mpesa_txn persistence
 src/mpesa/mpesa.service.ts STK/B2C + callback-as-truth into the wallet
-src/api/               NestJS app: controllers, stores, scheduler, M-Pesa
+src/auth/              phone+OTP: jwt.ts, sms.ts, auth.store.ts, auth.service.ts
+src/api/               NestJS app: controllers, guard, stores, scheduler
 src/main.ts            bootstrap (migrate, ensure package, pick Daraja, listen)
 src/seed.ts            build a funded test group
 src/index.ts           demo: one full cycle (npm run demo)
@@ -42,7 +44,7 @@ test/                  money / engine / holds / defaults / pg / api / scheduler 
 
 ```bash
 npm install
-npm test          # full suite (45 tests, incl. Postgres via in-process pg-mem)
+npm test          # full suite (55 tests, incl. Postgres via in-process pg-mem)
 npm run typecheck
 npm run demo      # settle one full Daily cycle and print balances
 ```
@@ -107,10 +109,15 @@ DATABASE_URL=postgres://user:pass@host:5432/bobly npm start   # API on :3000
 
 ## HTTP API + scheduler (NestJS)
 
-Token-based DI only (this toolchain emits no decorator metadata). Endpoints:
+Token-based DI only (this toolchain emits no decorator metadata). All
+group/wallet routes and the M-Pesa top-up/withdraw require a
+`Authorization: Bearer <token>` session; the `/auth/*` routes and the Daraja
+callbacks are public.
 
 | Method + path | Does |
 |---|---|
+| `POST /auth/otp/request` | Send a one-time code by SMS (public) |
+| `POST /auth/otp/verify` | Verify the code, return a session token (public) |
 | `POST /groups` | Create a Daily group (`filling`) |
 | `POST /groups/:id/join` | Add a member (creates user + wallet); returns `walletId` |
 | `POST /wallets/:id/topup` | Start an M-Pesa STK push (needs `amount`, `phone`); credited on callback |
@@ -150,11 +157,30 @@ callback** (ADR-8):
   no secret values live in code. `.env` is gitignored; production secrets
   belong in the deploy platform's store and `.context_ledger/memory/secrets/`.
 
+## Auth (phone + OTP, build spec §8)
+
+- `POST /auth/otp/request` sends a 6-digit code by SMS; `POST /auth/otp/verify`
+  checks it and returns a signed session token. Codes are stored **hashed**,
+  expire quickly, are single-use, and lock after too many wrong attempts.
+- A verified phone maps to an `app_user`; the token is a minimal HS256 JWT
+  (`src/auth/jwt.ts`, no external dependency) signed with `AUTH_JWT_SECRET`.
+- `AuthGuard` (`src/api/auth.guard.ts`) enforces a valid Bearer token on the
+  protected routes. The `SmsSender` is an interface — `FakeSmsSender` for
+  tests/dev, a real provider (Africa's Talking, §13-D6) wired later.
+- Secrets come from env (`.env.example`); none in code. If `AUTH_JWT_SECRET`
+  is unset the server generates an ephemeral one (dev only) and warns.
+
+> Follow-up: the guard authenticates (valid session) but does not yet
+> authorize per-resource ownership — e.g. that the caller owns the wallet
+> they top up or the membership they act on. That, and tying a join to the
+> authenticated user, come with the member-journey work.
+
 ## Not built yet (next steps, build spec §14)
 
-- Auth/OTP; the Flutter client.
+- The Flutter client; per-resource ownership checks (see the note above).
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against
-  the sandbox, not by the unit suite (which uses the fake).
+  the sandbox, not by the unit suite (which uses the fake); the callback
+  endpoints need Daraja source validation before production.
 - Incremental hold release (see the note above); a materialised wallet
   balance if the ledger grows large.
 

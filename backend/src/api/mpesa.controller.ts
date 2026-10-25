@@ -1,24 +1,9 @@
-import { BadRequestException, Body, Controller, HttpCode, Inject, Param, Post } from '@nestjs/common';
-import { Money } from '../domain/money';
+import { Body, Controller, HttpCode, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import type { MpesaService } from '../mpesa/mpesa.service';
+import { AuthGuard } from './auth.guard';
 import { toHttp } from './errors';
 import { MPESA_SERVICE } from './tokens';
-
-/** Whole-shilling amount, as M-Pesa requires (product spec §7). */
-function wholeAmount(raw: unknown): Money {
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n <= 0) {
-    throw new BadRequestException('amount must be a positive whole number of shillings');
-  }
-  return Money.of(String(n));
-}
-
-function requirePhone(raw: unknown): string {
-  if (typeof raw !== 'string' || !/^2547\d{8}$/.test(raw)) {
-    throw new BadRequestException('phone must be an M-Pesa MSISDN like 2547XXXXXXXX');
-  }
-  return raw;
-}
+import { requirePhone, wholeAmount } from './validation';
 
 @Controller()
 export class MpesaController {
@@ -27,6 +12,7 @@ export class MpesaController {
   /** Start a top-up: prompts the member's phone via STK push. The wallet is
    *  credited later, only when the STK callback confirms success. */
   @Post('wallets/:accountId/topup')
+  @UseGuards(AuthGuard)
   async topup(@Param('accountId') accountId: string, @Body() body: { amount?: unknown; phone?: unknown }) {
     const amount = wholeAmount(body?.amount);
     const phone = requirePhone(body?.phone);
@@ -39,6 +25,7 @@ export class MpesaController {
 
   /** Start a withdrawal: reserves the funds and sends a B2C payment. */
   @Post('wallets/:accountId/withdraw')
+  @UseGuards(AuthGuard)
   async withdraw(@Param('accountId') accountId: string, @Body() body: { amount?: unknown; phone?: unknown }) {
     const amount = wholeAmount(body?.amount);
     const phone = requirePhone(body?.phone);

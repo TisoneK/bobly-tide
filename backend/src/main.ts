@@ -1,8 +1,10 @@
 import 'reflect-metadata';
+import { randomBytes } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { Pool } from 'pg';
 import { AppModule } from './api/app.module';
 import { GroupStore } from './api/group.store';
+import { LogSmsSender } from './auth/sms';
 import { runMigrations } from './db/migrate';
 import { Money } from './domain/money';
 import { DAILY_PACKAGE } from './domain/packages';
@@ -39,6 +41,13 @@ function buildDaraja(): DarajaClient {
   });
 }
 
+function jwtSecret(): string {
+  const s = env['AUTH_JWT_SECRET'];
+  if (s) return s;
+  console.warn('AUTH_JWT_SECRET not set — generating an ephemeral secret (tokens reset on restart)');
+  return randomBytes(32).toString('hex');
+}
+
 const pool = new Pool({ connectionString: url });
 await runMigrations(pool);
 await new GroupStore(pool).ensureDailyPackage(DAILY_PACKAGE);
@@ -54,6 +63,13 @@ const app = await NestFactory.create(
     },
     daraja: buildDaraja(),
     mpesa: { withdrawalMin: Money.of(env['MPESA_WITHDRAWAL_MIN'] ?? '50') },
+    auth: {
+      jwtSecret: jwtSecret(),
+      otpTtlSec: Number(env['AUTH_OTP_TTL_SEC'] ?? 300),
+      tokenTtlSec: Number(env['AUTH_TOKEN_TTL_SEC'] ?? 86_400),
+      maxAttempts: Number(env['AUTH_OTP_MAX_ATTEMPTS'] ?? 5),
+    },
+    sms: new LogSmsSender(),
   }),
 );
 
