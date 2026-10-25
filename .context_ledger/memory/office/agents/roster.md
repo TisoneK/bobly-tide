@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Built the remaining pilot screens (top-up/withdraw, receipt, how-it-works, help, cycle-end) | Working | All review screens committed; Flutter uncompiled (no SDK) |
+| Mara | S002 | claude-opus-4-8 | Pilot hardening (ADR-15): gates/CI wiring, admin role + KYC review, leave/renew, stall-timeout | Working | 67 tests green; backend hardening done |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
