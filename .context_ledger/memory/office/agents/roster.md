@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Member-journey hardening done; now building KYC verification + security-order turns/countdown | Working | Hardening committed (ADR-11); starting the two new features |
+| Mara | S002 | claude-opus-4-8 | KYC verification gating done (ADR-12); next: security-order turns + countdown | Working | Feature 1 backend done, 61 tests green; Feature 2 + client next |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
