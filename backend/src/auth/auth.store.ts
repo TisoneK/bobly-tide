@@ -57,6 +57,11 @@ export class AuthStore {
     await this.pool.query('UPDATE otp_code SET attempts = attempts + 1 WHERE id = $1', [id]);
   }
 
+  /** Set the member's chosen first name (shown in the turn order). */
+  async setDisplayName(userId: string, displayName: string): Promise<void> {
+    await this.pool.query('UPDATE app_user SET display_name = $1 WHERE id = $2', [displayName, userId]);
+  }
+
   /** Return the user id for a phone, creating the account on first sight. */
   async findOrCreateUserByPhone(phone: string): Promise<string> {
     const found = await this.pool.query<{ id: string }>('SELECT id FROM app_user WHERE phone = $1', [phone]);

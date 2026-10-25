@@ -28,21 +28,20 @@ export class InsufficientFundsForHoldError extends Error {
 }
 
 /**
- * The security hold required of a member at turn position `joinOrder`
- * (product spec §8.1).
+ * The security hold required of a member (product spec §8.1, ADR-14).
  *
- * The group's worst case is a member who collects their payout and then
- * stops paying. A member at position p (1-based) is paid in hour p−1 and
- * then still owes a contribution for each of the remaining (N − p) hours.
- * So the hold must cover `(N − p) × contribution`:
- *   - position 1 (paid first) owes the most afterwards → the largest hold;
- *   - position N (paid last) owes nothing afterwards → no hold.
- * The hold is released as those remaining hours are paid (§8.1).
+ * Pilot model: a member prefunds and locks their **whole cycle of
+ * contributions** — `N × contribution` (KES 24 for Daily) — regardless of
+ * turn position. It is drawn down KES 1/hour as their contributions are paid
+ * and any remainder is released at cycle end, so the member never loses it
+ * (they get it back as the KES 22.80 payout, minus the 5% fee). One number
+ * to explain, and always covers the group's worst-case early-turn exposure.
+ *
+ * The `position` argument is kept for call-site compatibility but ignored —
+ * the hold is flat. (ADR-13's position-based `(N − p) × c` is superseded.)
  */
-export function requiredHold(pkg: Package, joinOrder: number): Money {
-  const remainingAfterTurn = pkg.size - joinOrder;
-  if (remainingAfterTurn <= 0) return Money.zero();
-  return pkg.hourlyContribution.times(remainingAfterTurn);
+export function requiredHold(pkg: Package, _position?: number): Money {
+  return pkg.hourlyContribution.times(pkg.size);
 }
 
 /** Current locked collateral available to a membership. */

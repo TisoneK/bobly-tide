@@ -13,14 +13,14 @@ describe('processDefault', () => {
   it('marks the member defaulted, returns the hold, and refunds the wallet', () => {
     const repo = new InMemoryLedgerRepo();
     const { memberships } = seedFullGroup(pkg, repo, { topUpEach: Money.of('24') });
-    const m = memberships.find((x) => x.joinOrder === 1)!; // H = 23
-    fundHold(m, pkg, repo); // wallet → 1, hold → 23
+    const m = memberships.find((x) => x.joinOrder === 1)!;
+    fundHold(m, pkg, repo); // wallet → 0, hold → 24 (full prefund locked)
 
     const res = processDefault(m, repo);
 
     expect(m.state).toBe('defaulted');
-    expect(res.released.equals('23')).toBe(true);
-    // Wallet after release = 1 + 23 = 24; all of it refunded (nothing owed).
+    expect(res.released.equals('24')).toBe(true);
+    // Wallet after release = 0 + 24 = 24; all of it refunded (nothing owed).
     expect(res.refunded.equals('24')).toBe(true);
     expect(holdAvailable(repo, m.id).equals('0')).toBe(true);
     expect(repo.balanceOf(m.walletId).equals('0')).toBe(true); // refunded out

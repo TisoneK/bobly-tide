@@ -71,6 +71,11 @@ export class AuthService {
     await this.sms.send(phone, `Your Bobly Tide code is ${code}. It expires in ${minutes} minutes.`);
   }
 
+  /** Set the member's display (first) name. */
+  async setProfile(userId: string, displayName: string): Promise<void> {
+    await this.store.setDisplayName(userId, displayName);
+  }
+
   async verifyOtp(phone: string, code: string): Promise<SessionToken> {
     const otp = await this.store.latestOtp(phone);
     if (!otp || otp.consumed) throw new InvalidOtpError();

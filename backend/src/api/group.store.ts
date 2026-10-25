@@ -20,6 +20,23 @@ export interface LoadedGroup {
   startAt: Date | null;
 }
 
+/** A member row for the group view — name + masked phone, never the full
+ *  number (ADR-14). */
+export interface MemberView {
+  userId: string;
+  joinOrder: number;
+  turnPosition: number | null;
+  state: string;
+  firstName: string | null;
+  maskedPhone: string;
+}
+
+/** 254712345678 → 2547••••678: keep the prefix and last 3 digits. */
+export function maskPhone(phone: string): string {
+  if (phone.length <= 7) return phone;
+  return `${phone.slice(0, 4)}••••${phone.slice(-3)}`;
+}
+
 interface GroupRow {
   id: string;
   package_id: string;
@@ -192,6 +209,42 @@ export class GroupStore {
       memberships: members.rows.map(mapMembership),
       startAt: row.start_at ? new Date(row.start_at) : null,
     };
+  }
+
+  /** Members of a group with display info (name + masked phone) for the view. */
+  async listMemberViews(groupId: string): Promise<MemberView[]> {
+    if (!isUuid(groupId)) return [];
+    const res = await this.pool.query<{
+      user_id: string;
+      join_order: number | string;
+      turn_position: number | string | null;
+      state: string;
+      phone: string;
+      display_name: string | null;
+    }>(
+      `SELECT m.user_id, m.join_order, m.turn_position, m.state, u.phone, u.display_name
+       FROM membership m JOIN app_user u ON u.id = m.user_id
+       WHERE m.group_id = $1
+       ORDER BY m.join_order`,
+      [groupId],
+    );
+    return res.rows.map((r) => ({
+      userId: r.user_id,
+      joinOrder: Number(r.join_order),
+      turnPosition: r.turn_position == null ? null : Number(r.turn_position),
+      state: r.state,
+      firstName: r.display_name,
+      maskedPhone: maskPhone(r.phone),
+    }));
+  }
+
+  /** The membership id that owns a wallet (for its locked-hold account). */
+  async membershipIdByWallet(walletId: string): Promise<string | null> {
+    if (!isUuid(walletId)) return null;
+    const res = await this.pool.query<{ id: string }>('SELECT id FROM membership WHERE wallet_id = $1', [
+      walletId,
+    ]);
+    return res.rows[0]?.id ?? null;
   }
 
   async listActive(): Promise<LoadedGroup[]> {

@@ -118,6 +118,7 @@ export class GroupsController {
     try {
       const loaded = await this.store.getGroup(id);
       const me = this.requireMember(loaded, user);
+      const views = await this.store.listMemberViews(id);
       const securedCount = loaded.memberships.filter((m) => m.turnPosition != null).length;
 
       // When your turn hour begins: start + (position-1) hours. Null until the
@@ -141,11 +142,13 @@ export class GroupsController {
         yourSecured: me.turnPosition != null,
         yourTurnAt,
         yourBalance: (await this.repo.balanceOf(me.walletId)).toString(),
-        members: loaded.memberships.map((m) => ({
-          joinOrder: m.joinOrder,
-          turnPosition: m.turnPosition ?? null,
-          state: m.state,
-          isYou: m.userId === user.sub,
+        members: views.map((v) => ({
+          joinOrder: v.joinOrder,
+          turnPosition: v.turnPosition,
+          state: v.state,
+          isYou: v.userId === user.sub,
+          name: v.firstName,
+          maskedPhone: v.maskedPhone,
         })),
       };
     } catch (e) {
