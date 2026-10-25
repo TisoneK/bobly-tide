@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Built phone+OTP auth (session tokens, AuthGuard) over the API | Working | 55 tests green; backend §14 step 3 done. Next: Flutter client |
+| Mara | S002 | claude-opus-4-8 | Authored the Flutter member client (app/) against the backend API | Working | Backend §14 steps 1-3 + Flutter client (step 4) done. Next: pilot hardening (§14 step 5) |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
