@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Flutter wired to lifecycle + ops endpoints (ADR-16): real renew/leave, admin KYC-review screen; KYC capture = live camera | Working | Client wiring authored (uncompiled, no SDK); backend unchanged, 67 tests green |
+| Mara | S002 | claude-opus-4-8 | Camera-first KYC capture screen for ID/face (ADR-17), wired to /verification/submit | Working | Capture screen authored (uncompiled, no SDK); image_picker added; backend unchanged, 67 tests green |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
