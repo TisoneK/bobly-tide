@@ -36,6 +36,29 @@ interface ECRow {
 export class VerificationStore {
   constructor(private readonly pool: Pool) {}
 
+  /** All submissions awaiting a decision, for ops review. */
+  async listPending(): Promise<{ userId: string; phone: string; kind: VerificationKind; detail: string | null; updatedAt: string }[]> {
+    const res = await this.pool.query<{
+      user_id: string;
+      phone: string;
+      kind: string;
+      detail: string | null;
+      updated_at: string | Date;
+    }>(
+      `SELECT v.user_id, u.phone, v.kind, v.detail, v.updated_at
+       FROM verification v JOIN app_user u ON u.id = v.user_id
+       WHERE v.status = 'pending'
+       ORDER BY v.updated_at`,
+    );
+    return res.rows.map((r) => ({
+      userId: r.user_id,
+      phone: r.phone,
+      kind: r.kind as VerificationKind,
+      detail: r.detail,
+      updatedAt: new Date(r.updated_at).toISOString(),
+    }));
+  }
+
   async list(userId: string): Promise<VerificationItem[]> {
     const res = await this.pool.query<VRow>(
       'SELECT kind, status, detail FROM verification WHERE user_id = $1',

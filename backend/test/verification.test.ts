@@ -60,6 +60,17 @@ describe('VerificationService — documents', () => {
     expect(await svc.submit(userId, 'id', 'doc-ref')).toBe('pending');
     expect((await svc.status(userId)).items.id).toBe('pending');
   });
+
+  it('an ops review resolves a pending submission', async () => {
+    const { svc, userId } = await setup({ autoApprove: false });
+    await svc.submit(userId, 'id', 'doc-ref');
+    await svc.review(userId, 'id', 'verified');
+    expect((await svc.status(userId)).items.id).toBe('verified');
+
+    await svc.submit(userId, 'face', 'selfie-ref');
+    await svc.review(userId, 'face', 'rejected', 'blurry');
+    expect((await svc.status(userId)).items.face).toBe('rejected');
+  });
 });
 
 describe('VerificationService — gating', () => {

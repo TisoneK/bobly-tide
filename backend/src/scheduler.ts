@@ -1,3 +1,4 @@
+import { processDefault } from './domain/defaults';
 import { releaseRemainingHold } from './domain/holds';
 import type { Package } from './domain/types';
 import { accountIdsForGroup, settleHourOnPg, withLedger } from './pg-settlement';
@@ -62,4 +63,21 @@ export async function settleDueHours(
   }
 
   return { settled, completed };
+}
+
+/**
+ * Dissolve a stalled filling group that never fully secured: refund every
+ * member (release any hold, return the remaining wallet balance) and mark the
+ * group dissolved, so no one's money is stuck. Members can rejoin.
+ */
+export async function dissolveGroup(
+  repo: PgLedgerRepo,
+  store: GroupStore,
+  loaded: LoadedGroup,
+): Promise<void> {
+  await withLedger(repo, accountIdsForGroup(loaded.memberships), (mem) => {
+    for (const m of loaded.memberships) processDefault(m, mem);
+  });
+  for (const m of loaded.memberships) await store.setMembershipState(m.id, 'left');
+  await store.setState(loaded.group.id, 'dissolved');
 }

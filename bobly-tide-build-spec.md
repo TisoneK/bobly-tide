@@ -20,8 +20,11 @@ they live in the product spec and this spec points at them.
 > turn order (payout position = security-posting order) with a turn
 > countdown (ADR-13), and the pilot screen-review fixes — flat full-24
 > security hold, Available/Held wallet, member name + masked phone, fee on
-> the receipt (ADR-14, see `screen-review.md`) — §14 steps 1–3, covered by a
-> 62-test suite. A Flutter
+> the receipt (ADR-14, see `screen-review.md`), and §14 step-5 pilot
+> hardening — the test suite wired into the ledger gates + CI, an admin/ops
+> role with KYC review, member leave/renew, and a scheduler stall-timeout
+> that dissolves and refunds groups that never fully secure (ADR-15) —
+> covered by a 67-test suite. A Flutter
 > member client (§14 step 4, ADR-10) lives in
 > [`app/`](app/): sign-up/OTP, package, join/queue, group/turn, wallet +
 > receipts — authored but not yet compiled (no Flutter SDK in the build

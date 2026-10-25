@@ -101,7 +101,12 @@ describe('SchedulerService.runDueTicks', () => {
   it('settles due hours across active groups and reports totals', async () => {
     const { repo, store } = await setup();
     await startedGroup(repo, store, T0);
-    const sched = new SchedulerService(repo, store, pkg, { enabled: false, tickMs: 1, hourMs: HOUR_MS });
+    const sched = new SchedulerService(repo, store, pkg, {
+      enabled: false,
+      tickMs: 1,
+      hourMs: HOUR_MS,
+      fillTimeoutMs: 1_000_000_000,
+    });
 
     const res = await sched.runDueTicks(new Date(T0.getTime() + 24 * HOUR_MS));
     expect(res.settled).toBe(24);
@@ -111,6 +116,44 @@ describe('SchedulerService.runDueTicks', () => {
     expect(await sched.runDueTicks(new Date(T0.getTime() + 48 * HOUR_MS))).toEqual({
       settled: 0,
       completed: 0,
+      dissolved: 0,
     });
+  });
+
+  it('dissolves a stalled filling group and refunds everyone', async () => {
+    const { repo, store } = await setup();
+    // A group where members joined and topped up but never secured.
+    const group = await store.createGroup();
+    const m1 = await store.joinGroupAsNewUser(group.id, pkg);
+    const m2 = await store.joinGroupAsNewUser(group.id, pkg);
+    await withLedger(repo, [m1.walletId, m2.walletId], (mem) => {
+      for (const m of [m1, m2]) {
+        mem.appendEntries([
+          {
+            id: randomUUID(),
+            walletId: m.walletId,
+            type: 'topup',
+            amount: Money.of('24'),
+            idempotencyKey: `topup:${m.id}`,
+            createdAt: T0,
+          },
+        ]);
+      }
+    });
+
+    const sched = new SchedulerService(repo, store, pkg, {
+      enabled: false,
+      tickMs: 1,
+      hourMs: HOUR_MS,
+      fillTimeoutMs: 10 * HOUR_MS,
+    });
+    // Well past the fill timeout → dissolve. (created_at is real wall-clock,
+    // so reckon 'now' from Date.now(), not the synthetic T0.)
+    const res = await sched.runDueTicks(new Date(Date.now() + 100 * HOUR_MS));
+    expect(res.dissolved).toBe(1);
+    expect((await store.getGroup(group.id)).group.state).toBe('dissolved');
+    // Everyone's top-up was refunded (wallet emptied back out to them).
+    expect((await repo.balanceOf(m1.walletId)).equals('0')).toBe(true);
+    expect((await repo.balanceOf(m2.walletId)).equals('0')).toBe(true);
   });
 });

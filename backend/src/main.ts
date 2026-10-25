@@ -78,6 +78,7 @@ const app = await NestFactory.create(
       enabled: true,
       tickMs: Number(env['TICK_MS'] ?? 60_000),
       hourMs: Number(env['HOUR_MS'] ?? ONE_HOUR_MS),
+      fillTimeoutMs: Number(env['FILL_TIMEOUT_MS'] ?? 48 * ONE_HOUR_MS),
     },
     daraja: buildDaraja(),
     mpesa: { withdrawalMin: Money.of(env['MPESA_WITHDRAWAL_MIN'] ?? '50') },
@@ -95,6 +96,11 @@ const app = await NestFactory.create(
       requiredKinds,
       emailCodeTtlSec: Number(env['VERIFICATION_EMAIL_TTL_SEC'] ?? 600),
       maxAttempts: Number(env['VERIFICATION_MAX_ATTEMPTS'] ?? 5),
+    },
+    admin: {
+      phones: new Set(
+        (env['ADMIN_PHONES'] ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+      ),
     },
   }),
 );

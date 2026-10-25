@@ -135,14 +135,35 @@ member — 403 with the missing items otherwise (ADR-12).
 | `POST /mpesa/callbacks/b2c` | Daraja B2C result → finalises or refunds the withdrawal |
 | `POST /groups/:id/secure` | Post your security to claim a turn (position is first-come-first-served); locks your hold; the last secure activates the group (member-only, verified) |
 | `POST /groups/:id/settle-due` | Settle any hours due now (member-only; same path the scheduler uses) |
+| `POST /groups/:id/leave` | Leave a group that hasn't started or has completed; releases the hold + refunds the balance (member-only; not allowed on an active cycle) |
+| `POST /groups/:id/renew` | After the cycle completes, join the next forming group (member-only, verified) |
 | `GET /groups/:id` | Your turn position, balance, and `yourTurnAt` (countdown target); the turn order and counts (other members' balances are not exposed; member-only) |
 | `GET /wallets/:id` | Balance + entry history (owner-only) |
+| `GET /admin/verifications` | Pending KYC submissions (admin-only) |
+| `POST /admin/verifications/:userId/review` | Approve/reject a submission (admin-only) |
 
 The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
 on an interval: for each active group it settles every hour that has come
 due (`dueMaxHour` from `start_at`), idempotently, and on the final hour
-releases holds and marks the group completed. The "hour" duration is
-configurable (`HOUR_MS`) so a pilot or a test can run accelerated time.
+releases holds and marks the group completed. It also **dissolves stalled
+filling groups** — a group older than `FILL_TIMEOUT_MS` whose members never
+all secured is dissolved and everyone is refunded, so no one's money is
+stuck. The "hour" duration is configurable (`HOUR_MS`) so a pilot or a test
+can run accelerated time.
+
+## Admin / ops (ADR-15)
+
+Admins are identified by phone (`ADMIN_PHONES`, no forgeable role claim); an
+`AdminGuard` runs after `AuthGuard`. For the pilot the ops console is KYC
+review: list pending submissions and approve/reject them (resolving the
+`pending` state a real KYC vendor would otherwise leave).
+
+## Gates & CI
+
+`backend/scripts/gate.sh` wires the suite into the ledger gates
+(`gates.conf`): **pre-commit** typechecks when `backend/` is staged (fast),
+and **integration / exit** run the full suite. CI runs it too on any
+`backend/**` change (`.github/workflows/backend-tests.yml`).
 
 ## Turn order & countdown (ADR-13)
 
@@ -204,13 +225,14 @@ callback** (ADR-8):
   them asynchronously — plug it in behind the interface.
 - `GET /verification` returns each item's status and what's missing.
 
-> Follow-up: a KYC-provider callback/review flow and an ops console to
-> approve or reject pending submissions (there is no admin role yet).
+> Review happens through the ops console (`/admin`, ADR-15). Still a
+> follow-up: a KYC-provider async callback so a real vendor can resolve
+> submissions without a manual step.
 
 ## Not built yet (next steps, build spec §14)
 
-- An admin/ops role (so create/start/settle aren't member-gated, and to
-  review KYC submissions) and per-user group-join limits (product spec §8.5).
+- Per-user group-join limits (product spec §8.5); a proper admin UI (the
+  ops endpoints exist, the console UI does not).
 - The Flutter client runs against this API but is unverified (no SDK here);
   secure-storage for its token.
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against

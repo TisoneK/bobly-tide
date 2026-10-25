@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import type { Package } from '../domain/types';
 import type { PgLedgerRepo } from '../repo/pg';
-import { settleDueHours } from '../scheduler';
+import { dissolveGroup, settleDueHours } from '../scheduler';
 import { GROUP_STORE, LEDGER_REPO, PACKAGE, SCHEDULER_CONFIG, type SchedulerConfig } from './tokens';
 import type { GroupStore } from './group.store';
 
@@ -37,8 +37,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Settle due hours for every active group. Guarded so runs never overlap. */
-  async runDueTicks(now: Date): Promise<{ settled: number; completed: number }> {
-    if (this.running) return { settled: 0, completed: 0 };
+  async runDueTicks(now: Date): Promise<{ settled: number; completed: number; dissolved: number }> {
+    if (this.running) return { settled: 0, completed: 0, dissolved: 0 };
     this.running = true;
     try {
       const groups = await this.store.listActive();
@@ -53,7 +53,20 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
           this.log.error(`group ${loaded.group.id} settlement failed: ${(err as Error).message}`);
         }
       }
-      return { settled, completed };
+
+      // Dissolve filling groups that stalled (never fully secured).
+      let dissolved = 0;
+      const stalled = await this.store.listStalledFilling(this.config.fillTimeoutMs, now);
+      for (const loaded of stalled) {
+        try {
+          await dissolveGroup(this.repo, this.store, loaded);
+          dissolved++;
+        } catch (err) {
+          this.log.error(`group ${loaded.group.id} dissolve failed: ${(err as Error).message}`);
+        }
+      }
+
+      return { settled, completed, dissolved };
     } finally {
       this.running = false;
     }

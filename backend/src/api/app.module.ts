@@ -11,6 +11,8 @@ import { PgLedgerRepo } from '../repo/pg';
 import type { EmailSender, KycProvider } from '../verification/providers';
 import { VerificationService, type VerificationConfig } from '../verification/verification.service';
 import { VerificationStore } from '../verification/verification.store';
+import { AdminController } from './admin.controller';
+import { AdminGuard, type AdminConfig } from './admin.guard';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { GroupStore } from './group.store';
@@ -19,6 +21,7 @@ import { MpesaController } from './mpesa.controller';
 import { PackagesController } from './packages.controller';
 import { SchedulerService } from './scheduler.service';
 import {
+  ADMIN_CONFIG,
   AUTH_CONFIG,
   AUTH_SERVICE,
   AUTH_STORE,
@@ -53,6 +56,7 @@ export interface AppModuleOptions {
   email: EmailSender;
   kyc: KycProvider;
   verification: VerificationConfig;
+  admin: AdminConfig;
 }
 
 @Module({})
@@ -63,6 +67,7 @@ export class AppModule {
       controllers: [
         AuthController,
         VerificationController,
+        AdminController,
         GroupsController,
         PackagesController,
         WalletsController,
@@ -79,6 +84,7 @@ export class AppModule {
         { provide: EMAIL_SENDER, useValue: opts.email },
         { provide: KYC_PROVIDER, useValue: opts.kyc },
         { provide: VERIFICATION_CONFIG, useValue: opts.verification },
+        { provide: ADMIN_CONFIG, useValue: opts.admin },
         { provide: LEDGER_REPO, useFactory: (p: Pool) => new PgLedgerRepo(p), inject: [POOL] },
         { provide: GROUP_STORE, useFactory: (p: Pool) => new GroupStore(p), inject: [POOL] },
         { provide: MPESA_STORE, useFactory: (p: Pool) => new MpesaStore(p), inject: [POOL] },
@@ -102,6 +108,7 @@ export class AppModule {
           inject: [VERIFICATION_STORE, EMAIL_SENDER, KYC_PROVIDER, VERIFICATION_CONFIG],
         },
         AuthGuard,
+        AdminGuard,
         SchedulerService,
       ],
     };

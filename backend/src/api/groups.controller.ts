@@ -1,5 +1,6 @@
 import { ConflictException, Controller, ForbiddenException, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import type { SessionClaims } from '../auth/auth.service';
+import { processDefault } from '../domain/defaults';
 import { fundHold } from '../domain/holds';
 import type { Group, Membership, Package } from '../domain/types';
 import { accountIdsForGroup, withLedger } from '../pg-settlement';
@@ -105,6 +106,45 @@ export class GroupsController {
       const loaded = await this.store.getGroup(id);
       this.requireMember(loaded, user);
       return await settleDueHours(this.repo, this.store, loaded, this.pkg, new Date(), this.config.hourMs);
+    } catch (e) {
+      throw toHttp(e);
+    }
+  }
+
+  /** Leave a group that hasn't started, or has completed: release any hold,
+   *  refund the remaining balance, and mark the membership left. Leaving an
+   *  active cycle is not self-service (contact support). Member-only. */
+  @Post(':id/leave')
+  async leave(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
+    try {
+      const loaded = await this.store.getGroup(id);
+      const me = this.requireMember(loaded, user);
+      if (loaded.group.state === 'active') {
+        throw new ConflictException('you cannot leave an active cycle — contact support');
+      }
+      const { result } = await withLedger(this.repo, accountIdsForGroup([me]), (mem) =>
+        processDefault(me, mem),
+      );
+      await this.store.setMembershipState(me.id, 'left');
+      return { left: true, released: result.released.toString(), refunded: result.refunded.toString() };
+    } catch (e) {
+      throw toHttp(e);
+    }
+  }
+
+  /** Renew once a cycle completes: join the next forming group of the
+   *  package, tied to you. Member-only, verified. */
+  @Post(':id/renew')
+  async renew(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
+    try {
+      const loaded = await this.store.getGroup(id);
+      this.requireMember(loaded, user);
+      if (loaded.group.state !== 'completed') {
+        throw new ConflictException('renew is available once the cycle completes');
+      }
+      await this.verification.requireVerified(user.sub);
+      const m = await this.store.joinPackage(user.sub, this.pkg);
+      return { groupId: m.groupId, membershipId: m.id, walletId: m.walletId, joinOrder: m.joinOrder };
     } catch (e) {
       throw toHttp(e);
     }

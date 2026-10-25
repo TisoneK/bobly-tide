@@ -18,6 +18,7 @@ import { FakeEmailSender, FakeKycProvider } from '../src/verification/providers'
 const pkg = DAILY_PACKAGE;
 const phoneFor = (i: number) => `2547${i.toString().padStart(8, '0')}`;
 const emailFor = (i: number) => `member${i}@example.com`;
+const ADMIN_PHONE = '254799999999';
 
 describe('HTTP API (e2e)', () => {
   let app: INestApplication;
@@ -77,7 +78,7 @@ describe('HTTP API (e2e)', () => {
         AppModule.forRoot({
           pool,
           pkg,
-          scheduler: { enabled: false, tickMs: 60_000, hourMs: ONE_HOUR_MS },
+          scheduler: { enabled: false, tickMs: 60_000, hourMs: ONE_HOUR_MS, fillTimeoutMs: ONE_HOUR_MS },
           daraja: new FakeDarajaClient(),
           mpesa: { withdrawalMin: Money.of('50') },
           auth: { jwtSecret: 'test-secret', otpTtlSec: 300, tokenTtlSec: 3600, maxAttempts: 5 },
@@ -90,6 +91,7 @@ describe('HTTP API (e2e)', () => {
             emailCodeTtlSec: 600,
             maxAttempts: 5,
           },
+          admin: { phones: new Set([ADMIN_PHONE]) },
         }),
       ],
     }).compile();
@@ -217,5 +219,30 @@ describe('HTTP API (e2e)', () => {
       .set('Authorization', bearer)
       .send({ amount: '-5', phone: phoneFor(1) })
       .expect(400);
+  });
+
+  it('restricts the admin console to admins', async () => {
+    const http = app.getHttpServer();
+    const member = await login(http, phoneFor(1));
+    await request(http).get('/admin/verifications').set('Authorization', member).expect(403);
+    const admin = await login(http, ADMIN_PHONE);
+    await request(http).get('/admin/verifications').set('Authorization', admin).expect(200);
+  });
+
+  it('lets a member leave a group that has not started', async () => {
+    const http = app.getHttpServer();
+    const bearer = await login(http, phoneFor(1));
+    await verifyFully(http, bearer, emailFor(1));
+    const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
+    const res = await request(http).post(`/groups/${join.body.groupId}/leave`).set('Authorization', bearer).expect(201);
+    expect(res.body.left).toBe(true);
+  });
+
+  it('refuses to renew a group that is still filling', async () => {
+    const http = app.getHttpServer();
+    const bearer = await login(http, phoneFor(1));
+    await verifyFully(http, bearer, emailFor(1));
+    const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
+    await request(http).post(`/groups/${join.body.groupId}/renew`).set('Authorization', bearer).expect(409);
   });
 });

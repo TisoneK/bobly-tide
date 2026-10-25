@@ -18,6 +18,7 @@ export const VERIFICATION_SERVICE = Symbol('VERIFICATION_SERVICE');
 export const VERIFICATION_CONFIG = Symbol('VERIFICATION_CONFIG');
 export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
 export const KYC_PROVIDER = Symbol('KYC_PROVIDER');
+export const ADMIN_CONFIG = Symbol('ADMIN_CONFIG');
 
 export interface SchedulerConfig {
   /** Start the background interval. Off in tests (they drive ticks directly). */
@@ -26,4 +27,7 @@ export interface SchedulerConfig {
   tickMs: number;
   /** Wall-clock duration of one Bobly "hour" — 1h in prod, shrinkable in tests. */
   hourMs: number;
+  /** A filling group older than this with members who never secured is
+   *  dissolved (holds released, balances refunded). */
+  fillTimeoutMs: number;
 }

@@ -110,6 +110,17 @@ export class VerificationService {
     await this.store.upsert(userId, 'email', 'verified', rec.email, randomUUID);
   }
 
+  /** Ops decision on a pending submission (build spec §6 — manual KYC review). */
+  async review(
+    userId: string,
+    kind: VerificationKind,
+    decision: 'verified' | 'rejected',
+    reason?: string,
+  ): Promise<void> {
+    const detail = decision === 'rejected' ? (reason ?? 'rejected') : null;
+    await this.store.upsert(userId, kind, decision, detail, randomUUID);
+  }
+
   // --- id / face / address ---
   async submit(userId: string, kind: KycKind, reference: string): Promise<VerificationStatus> {
     await this.store.upsert(userId, kind, 'pending', reference, randomUUID);

@@ -252,6 +252,21 @@ export class GroupStore {
     return Promise.all(g.rows.map((r) => this.getGroup(r.id)));
   }
 
+  /** Filling groups older than `maxAgeMs` — stalled, since they never filled
+   *  and secured. (Age filtered in JS to stay driver-independent.) */
+  async listStalledFilling(maxAgeMs: number, now: Date): Promise<LoadedGroup[]> {
+    const g = await this.pool.query<{ id: string; created_at: string | Date }>(
+      "SELECT id, created_at FROM \"group\" WHERE state = 'filling'",
+    );
+    const cutoff = now.getTime() - maxAgeMs;
+    const stale = g.rows.filter((r) => new Date(r.created_at).getTime() <= cutoff);
+    return Promise.all(stale.map((r) => this.getGroup(r.id)));
+  }
+
+  async setMembershipState(membershipId: string, state: Membership['state']): Promise<void> {
+    await this.pool.query('UPDATE membership SET state = $1 WHERE id = $2', [state, membershipId]);
+  }
+
   /** Assign a member's payout position and mark them secured. */
   async setTurnPosition(membershipId: string, position: number, securedAt: Date): Promise<void> {
     await this.pool.query('UPDATE membership SET turn_position = $1, secured_at = $2 WHERE id = $3', [
