@@ -6,6 +6,7 @@ import '../models.dart';
 import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
+import 'kyc_capture_screen.dart';
 
 const _labels = <String, String>{
   'email': 'Email',
@@ -46,6 +47,15 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   void _refresh() {
     setState(() => _future = ref.read(apiClientProvider).verificationStatus());
+  }
+
+  /// Open the live-camera capture for id/face; refresh on a submission so the
+  /// item flips to "pending".
+  Future<void> _capture(String kind) async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => KycCaptureScreen(kind: kind)),
+    );
+    if (submitted == true && mounted) _refresh();
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -192,10 +202,17 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
             Expanded(child: Text(_labels[kind]!, style: const TextStyle(fontWeight: FontWeight.w700))),
             if (done || pending)
               _statusChip(status)
+            else if (kind == 'id' || kind == 'face')
+              // ID and face are captured live on the camera (ADR-16).
+              OutlinedButton.icon(
+                onPressed: () => _capture(kind),
+                icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                label: Text(kind == 'face' ? 'Take selfie' : 'Scan ID'),
+              )
             else
               OutlinedButton(
                 onPressed: () => _run(() async {
-                  // A real build uploads the asset first; the pilot sends a reference.
+                  // Proof of address is a document reference for the pilot.
                   await ref.read(apiClientProvider).submitKyc(kind, '$kind-submission');
                   if (mounted) showInfo(context, 'Submitted for review');
                 }),
