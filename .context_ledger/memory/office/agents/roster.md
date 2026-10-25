@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Camera-first KYC capture screen for ID/face (ADR-17), wired to /verification/submit | Working | Capture screen authored (uncompiled, no SDK); image_picker added; backend unchanged, 67 tests green |
+| Mara | S002 | claude-opus-4-8 | Smile ID KYC vendor behind KycProvider (ADR-18): upload-auth signature + async result callback resolving pending submissions | Working | Backend done, 78 tests green + typecheck clean; Smile written to v2 spec, not yet sandbox-run; client SDK swap still a follow-up |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
