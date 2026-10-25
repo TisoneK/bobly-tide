@@ -9,6 +9,15 @@ export interface VerificationItem {
   detail: string | null;
 }
 
+/** An async KYC vendor job, matched back from the result callback. */
+export interface KycJob {
+  id: string;
+  providerRef: string;
+  userId: string;
+  kind: VerificationKind;
+  status: 'pending' | 'resolved';
+}
+
 export interface EmailCode {
   id: string;
   codeHash: string;
@@ -95,6 +104,43 @@ export class VerificationStore {
         [idGen(), userId, kind, status, detail, now],
       );
     }
+  }
+
+  // --- async KYC vendor jobs (kyc_job) ---
+
+  /** Record a vendor job so its result callback can be matched back. */
+  async createJob(rec: { id: string; providerRef: string; userId: string; kind: VerificationKind }): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO kyc_job (id, provider_ref, user_id, kind, status, created_at)
+       VALUES ($1, $2, $3, $4, 'pending', $5)`,
+      [rec.id, rec.providerRef, rec.userId, rec.kind, new Date().toISOString()],
+    );
+  }
+
+  async findJobByRef(providerRef: string): Promise<KycJob | null> {
+    const res = await this.pool.query<{
+      id: string;
+      provider_ref: string;
+      user_id: string;
+      kind: string;
+      status: string;
+    }>('SELECT id, provider_ref, user_id, kind, status FROM kyc_job WHERE provider_ref = $1', [providerRef]);
+    const r = res.rows[0];
+    if (!r) return null;
+    return {
+      id: r.id,
+      providerRef: r.provider_ref,
+      userId: r.user_id,
+      kind: r.kind as VerificationKind,
+      status: r.status as 'pending' | 'resolved',
+    };
+  }
+
+  async markJobResolved(id: string): Promise<void> {
+    await this.pool.query(
+      "UPDATE kyc_job SET status = 'resolved', resolved_at = $2 WHERE id = $1",
+      [id, new Date().toISOString()],
+    );
   }
 
   async createEmailCode(rec: {

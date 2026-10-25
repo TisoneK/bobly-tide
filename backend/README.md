@@ -126,6 +126,8 @@ member — 403 with the missing items otherwise (ADR-12).
 | `POST /verification/email/request` | Email a 6-digit confirmation code |
 | `POST /verification/email/verify` | Confirm the email code |
 | `POST /verification/submit` | Submit an id / face / address document for review |
+| `POST /verification/kyc/authorize` | Get a signed vendor job for the client SDK to upload a selfie/ID + run liveness |
+| `POST /verification/callbacks/kyc` | KYC vendor result callback → resolves the pending submission (public, signature-verified) |
 | `POST /packages/daily/join` | Join the Daily package (verified members); server allocates a filling group |
 | `POST /groups` | Create an empty Daily group (operational) |
 | `POST /groups/:id/join` | Join this specific group as the authenticated user |
@@ -220,14 +222,24 @@ callback** (ADR-8):
 - Email is self-service: `POST /verification/email/request` emails a hashed,
   short-lived code; `POST /verification/email/verify` confirms it.
 - id / face / address go to a `KycProvider` (`src/verification/providers.ts`).
-  No real vendor is wired, so submissions stay **pending** unless
-  `KYC_AUTO_APPROVE=true` (demo only). A real vendor (e.g. Smile ID) resolves
-  them asynchronously — plug it in behind the interface.
+  Without vendor credentials the `FakeKycProvider` leaves submissions
+  **pending** unless `KYC_AUTO_APPROVE=true` (demo only).
+- **Smile ID** (`src/verification/smile.ts`, ADR-18) is the real async vendor,
+  selected when `SMILE_PARTNER_ID` + `SMILE_API_KEY` are set. The images never
+  pass through our server: `POST /verification/kyc/authorize` returns a signed,
+  timestamped job (Smile ID v2 signature = `base64(HMAC-SHA256(apiKey,
+  timestamp+partnerId+"sid_request"))`) that the client SDK uses to upload the
+  selfie/ID and run liveness. Smile ID then POSTs its result to
+  `POST /verification/callbacks/kyc`; the provider verifies the payload
+  signature and maps the result code (+ liveness) to verified/rejected, and the
+  job reference (`kyc_job`) resolves the right member's item. The callback is
+  idempotent and ignores unsigned or unmatched payloads.
 - `GET /verification` returns each item's status and what's missing.
 
-> Review happens through the ops console (`/admin`, ADR-15). Still a
-> follow-up: a KYC-provider async callback so a real vendor can resolve
-> submissions without a manual step.
+> Review also happens through the ops console (`/admin`, ADR-15) for manual
+> decisions. Still a follow-up: the on-device Smile ID SDK (the Flutter client
+> currently captures with `image_picker` as a stand-in) and real sandbox
+> verification against live credentials.
 
 ## Not built yet (next steps, build spec §14)
 
@@ -238,6 +250,10 @@ callback** (ADR-8):
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against
   the sandbox, not by the unit suite (which uses the fake); the callback
   endpoints need Daraja source validation before production.
+- `SmileIdKycProvider` is written to the Smile ID v2 spec and unit-tested for
+  signature + result mapping, but not yet run against the sandbox; the Flutter
+  client still needs the on-device Smile ID SDK (it captures with `image_picker`
+  as a stand-in today).
 - Incremental hold release (see the note above); a materialised wallet
   balance if the ledger grows large.
 

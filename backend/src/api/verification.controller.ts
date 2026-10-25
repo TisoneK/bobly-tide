@@ -59,4 +59,20 @@ export class VerificationController {
     const status = await this.svc.submit(user.sub, kind as KycKind, reference);
     return { kind, status };
   }
+
+  /** Authorize a live-camera upload + liveness run straight to the KYC vendor.
+   *  Returns the signed job the client SDK needs; the vendor resolves it later
+   *  via its result callback. 400 if no async vendor is configured. */
+  @Post('kyc/authorize')
+  async authorize(@Body() body: { kind?: unknown }, @CurrentUser() user: SessionClaims) {
+    const kind = body?.kind;
+    if (typeof kind !== 'string' || !KYC_KINDS.includes(kind as KycKind)) {
+      throw new BadRequestException(`kind must be one of ${KYC_KINDS.join(', ')}`);
+    }
+    try {
+      return await this.svc.authorizeKyc(user.sub, kind as KycKind);
+    } catch (e) {
+      throw toHttp(e);
+    }
+  }
 }

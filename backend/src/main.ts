@@ -10,7 +10,8 @@ import { Money } from './domain/money';
 import { DAILY_PACKAGE } from './domain/packages';
 import { type DarajaClient, FakeDarajaClient, HttpDarajaClient } from './mpesa/daraja';
 import { ONE_HOUR_MS } from './scheduler';
-import { FakeKycProvider, LogEmailSender } from './verification/providers';
+import { FakeKycProvider, type KycProvider, LogEmailSender } from './verification/providers';
+import { SmileIdKycProvider } from './verification/smile';
 import type { VerificationKind } from './verification/verification.store';
 
 const url = process.env['DATABASE_URL'];
@@ -50,7 +51,23 @@ function jwtSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
-function buildKyc(): FakeKycProvider {
+/** Use Smile ID when credentials are configured; otherwise the fake (local
+ *  dev / tests), which stays pending unless KYC_AUTO_APPROVE is on. */
+function buildKyc(): KycProvider {
+  if (env['SMILE_PARTNER_ID'] && env['SMILE_API_KEY']) {
+    const approved = (env['SMILE_APPROVED_CODES'] ?? '0810,0812,0820,1012,1020')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    console.warn('Smile ID KYC provider wired — submissions resolve via the vendor result callback');
+    return new SmileIdKycProvider({
+      partnerId: env['SMILE_PARTNER_ID'],
+      apiKey: env['SMILE_API_KEY'],
+      baseUrl: env['SMILE_BASE_URL'] ?? 'https://testapi.smileidentity.com/v1',
+      callbackUrl: env['SMILE_CALLBACK_URL'] ?? '',
+      approvedCodes: new Set(approved),
+    });
+  }
   const auto = env['KYC_AUTO_APPROVE'] === 'true';
   if (auto) {
     console.warn('KYC_AUTO_APPROVE=true — document/face/address submissions auto-verify (demo only)');

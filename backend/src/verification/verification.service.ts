@@ -3,6 +3,7 @@ import {
   type EmailSender,
   type KycKind,
   type KycProvider,
+  type KycUploadAuth,
 } from './providers';
 import {
   type VerificationItem,
@@ -23,6 +24,14 @@ export class VerificationRequiredError extends Error {
   constructor(public readonly missing: VerificationKind[]) {
     super(`verification required: ${missing.join(', ')}`);
     this.name = 'VerificationRequiredError';
+  }
+}
+
+/** Upload authorization was requested but no async KYC vendor is configured. */
+export class KycVendorNotConfiguredError extends Error {
+  constructor() {
+    super('no KYC vendor is configured for live capture upload');
+    this.name = 'KycVendorNotConfiguredError';
   }
 }
 
@@ -125,8 +134,49 @@ export class VerificationService {
   async submit(userId: string, kind: KycKind, reference: string): Promise<VerificationStatus> {
     await this.store.upsert(userId, kind, 'pending', reference, randomUUID);
     const result = await this.kyc.review(kind, userId, reference);
+    // A provider that resolves asynchronously hands back a job reference and
+    // leaves the item pending; record the job so its callback can match it.
+    if (result.providerRef && result.decision === 'pending') {
+      await this.store.createJob({ id: randomUUID(), providerRef: result.providerRef, userId, kind });
+    }
     const detail = result.decision === 'rejected' ? (result.reason ?? 'rejected') : reference;
     await this.store.upsert(userId, kind, result.decision, detail, randomUUID);
     return result.decision;
+  }
+
+  /**
+   * Authorize the client SDK to upload a selfie / document straight to the
+   * KYC vendor and run a liveness check. Records a pending job keyed on the
+   * vendor reference, so the async result callback can resolve it. Throws if
+   * no async vendor is configured.
+   */
+  async authorizeKyc(userId: string, kind: KycKind): Promise<KycUploadAuth> {
+    if (!this.kyc.authorizeUpload) throw new KycVendorNotConfiguredError();
+    const jobId = `kyc-${kind}-${randomUUID()}`;
+    const auth = this.kyc.authorizeUpload(kind, userId, jobId);
+    await this.store.createJob({ id: randomUUID(), providerRef: jobId, userId, kind });
+    await this.store.upsert(userId, kind, 'pending', `vendor:${jobId}`, randomUUID);
+    return auth;
+  }
+
+  /**
+   * Resolve an async KYC result callback from the vendor. Verifies + parses
+   * the payload (via the provider), matches it to the pending job, and sets
+   * the verification item. Idempotent and safe against unmatched or unsigned
+   * callbacks: a payload that doesn't verify or doesn't match moves nothing.
+   */
+  async resolveKycCallback(
+    payload: unknown,
+  ): Promise<{ matched: boolean; decision?: 'verified' | 'rejected' }> {
+    if (!this.kyc.parseCallback) return { matched: false };
+    const res = this.kyc.parseCallback(payload);
+    if (!res) return { matched: false };
+    const job = await this.store.findJobByRef(res.providerRef);
+    if (!job) return { matched: false };
+    if (job.status === 'resolved') return { matched: true, decision: res.decision };
+    const detail = res.decision === 'rejected' ? (res.reason ?? 'rejected') : `vendor:${job.providerRef}`;
+    await this.store.upsert(job.userId, job.kind, res.decision, detail, randomUUID);
+    await this.store.markJobResolved(job.id);
+    return { matched: true, decision: res.decision };
   }
 }

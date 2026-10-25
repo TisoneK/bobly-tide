@@ -17,6 +17,7 @@ import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { GroupStore } from './group.store';
 import { GroupsController } from './groups.controller';
+import { KycCallbackController } from './kyc-callback.controller';
 import { MpesaController } from './mpesa.controller';
 import { PackagesController } from './packages.controller';
 import { SchedulerService } from './scheduler.service';
@@ -67,6 +68,7 @@ export class AppModule {
       controllers: [
         AuthController,
         VerificationController,
+        KycCallbackController,
         AdminController,
         GroupsController,
         PackagesController,
