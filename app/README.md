@@ -40,13 +40,17 @@ lib/widgets/             formatting + shared UI helpers
 1. **Sign in** — enter M-Pesa number → `POST /auth/otp/request`.
 2. **OTP** — enter the 6-digit code → `POST /auth/otp/verify` → session token
    (held in memory for the pilot).
-3. **Home** — the Daily package, and a one-tap **Join** (`POST
-   /packages/daily/join`); the server puts you in the next forming group and
-   ties the membership to your account.
-4. **Group** — a queue view while filling (slots remaining), a turn-order
-   view once active, with your own position and balance (other members'
-   balances are not shown).
-5. **Wallet** — balance + receipts, with **Top up** (M-Pesa STK push) and
+3. **Verify** — before joining or moving money, confirm email (a code),
+   plus ID, face and proof of address (reviewed by a KYC provider). Home
+   shows a "Verify to join" card until all items pass.
+4. **Home** — the Daily package, and a one-tap **Join** (`POST
+   /packages/daily/join`, verified members only); the server puts you in the
+   next forming group and ties the membership to your account.
+5. **Group** — a queue while filling; **post your security** to claim a turn
+   (position is first-come-first-served). Once everyone has secured, the
+   group goes live and the screen shows a **live countdown** to your turn.
+   Your own position and balance show; other members' balances do not.
+6. **Wallet** — balance + receipts, with **Top up** (M-Pesa STK push) and
    **Withdraw** (M-Pesa B2C); both complete once M-Pesa confirms.
 
 ## Known gaps (follow-ups)

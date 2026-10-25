@@ -1,7 +1,7 @@
-import { Controller, ForbiddenException, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
+import { ConflictException, Controller, ForbiddenException, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import type { SessionClaims } from '../auth/auth.service';
-import { fundGroupHolds } from '../domain/holds';
-import type { Membership, Package } from '../domain/types';
+import { fundHold } from '../domain/holds';
+import type { Group, Membership, Package } from '../domain/types';
 import { accountIdsForGroup, withLedger } from '../pg-settlement';
 import type { PgLedgerRepo } from '../repo/pg';
 import { settleDueHours } from '../scheduler';
@@ -50,26 +50,49 @@ export class GroupsController {
     }
   }
 
-  /** Fund every member's hold and activate the group. Members of the group only. */
-  @Post(':id/start')
-  async start(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
+  /**
+   * Post your security to claim a turn. The payout position is assigned
+   * first-come-first-served (the order members secure), and the hold for
+   * that position is locked from your wallet now. When the last member
+   * secures, the group activates and the hourly turns begin. Member-only,
+   * verified, one secure per member.
+   */
+  @Post(':id/secure')
+  async secure(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
     try {
+      await this.verification.requireVerified(user.sub);
       const loaded = await this.store.getGroup(id);
-      this.requireMember(loaded, user);
+      const me = this.requireMember(loaded, user);
       if (loaded.group.state !== 'filling') {
-        throw new GroupNotJoinableError(`group ${id} is ${loaded.group.state}, cannot start`);
+        throw new GroupNotJoinableError(`group ${id} is ${loaded.group.state}, can no longer be secured`);
       }
-      if (loaded.memberships.length !== this.pkg.size) {
-        throw new GroupNotJoinableError(
-          `group ${id} is not full (${loaded.memberships.length}/${this.pkg.size})`,
-        );
-      }
-      await withLedger(this.repo, accountIdsForGroup(loaded.memberships), (mem) =>
-        fundGroupHolds(this.pkg, loaded.memberships, mem),
+      if (me.turnPosition != null) throw new ConflictException('you have already secured your spot');
+
+      const securedCount = loaded.memberships.filter((m) => m.turnPosition != null).length;
+      const position = securedCount + 1;
+      const meSecured: Membership = { ...me, turnPosition: position };
+
+      // Lock the hold for this position atomically; 400 if the wallet is short.
+      await withLedger(this.repo, accountIdsForGroup([meSecured]), (mem) =>
+        fundHold(meSecured, this.pkg, mem),
       );
-      const startAt = new Date();
-      await this.store.setState(id, 'active', startAt);
-      return { state: 'active', startAt: startAt.toISOString() };
+      await this.store.setTurnPosition(me.id, position, new Date());
+
+      // All secured → the group starts and the clock begins.
+      let state: Group['state'] = loaded.group.state;
+      let startAt = loaded.startAt;
+      if (position === this.pkg.size) {
+        startAt = new Date();
+        await this.store.setState(id, 'active', startAt);
+        state = 'active';
+      }
+      return {
+        turnPosition: position,
+        securedCount: position,
+        size: this.pkg.size,
+        state,
+        startAt: startAt?.toISOString() ?? null,
+      };
     } catch (e) {
       throw toHttp(e);
     }
@@ -87,22 +110,40 @@ export class GroupsController {
     }
   }
 
-  /** Member view: turn order + states, your own position and balance. Other
-   *  members' balances are not exposed. */
+  /** Member view: turn order + states, your own position, balance, and when
+   *  your turn arrives (for the countdown). Other members' balances are not
+   *  exposed. */
   @Get(':id')
   async get(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
     try {
       const loaded = await this.store.getGroup(id);
       const me = this.requireMember(loaded, user);
+      const securedCount = loaded.memberships.filter((m) => m.turnPosition != null).length;
+
+      // When your turn hour begins: start + (position-1) hours. Null until the
+      // group is active and you have secured a position.
+      let yourTurnAt: string | null = null;
+      if (loaded.group.state === 'active' && loaded.startAt && me.turnPosition != null) {
+        yourTurnAt = new Date(
+          loaded.startAt.getTime() + (me.turnPosition - 1) * this.config.hourMs,
+        ).toISOString();
+      }
+
       return {
         id: loaded.group.id,
         state: loaded.group.state,
         startAt: loaded.startAt?.toISOString() ?? null,
         size: this.pkg.size,
-        yourPosition: me.joinOrder,
+        joined: loaded.memberships.length,
+        securedCount,
+        hourMs: this.config.hourMs,
+        yourPosition: me.turnPosition ?? null,
+        yourSecured: me.turnPosition != null,
+        yourTurnAt,
         yourBalance: (await this.repo.balanceOf(me.walletId)).toString(),
         members: loaded.memberships.map((m) => ({
           joinOrder: m.joinOrder,
+          turnPosition: m.turnPosition ?? null,
           state: m.state,
           isYou: m.userId === user.sub,
         })),

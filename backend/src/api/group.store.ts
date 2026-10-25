@@ -32,6 +32,7 @@ interface MembershipRow {
   user_id: string;
   wallet_id: string;
   join_order: number;
+  turn_position: number | string | null;
   state: string;
 }
 
@@ -198,6 +199,15 @@ export class GroupStore {
     return Promise.all(g.rows.map((r) => this.getGroup(r.id)));
   }
 
+  /** Assign a member's payout position and mark them secured. */
+  async setTurnPosition(membershipId: string, position: number, securedAt: Date): Promise<void> {
+    await this.pool.query('UPDATE membership SET turn_position = $1, secured_at = $2 WHERE id = $3', [
+      position,
+      securedAt.toISOString(),
+      membershipId,
+    ]);
+  }
+
   async setState(groupId: string, state: Group['state'], startAt?: Date): Promise<void> {
     if (startAt) {
       await this.pool.query('UPDATE "group" SET state = $1, start_at = $2 WHERE id = $3', [
@@ -212,7 +222,7 @@ export class GroupStore {
 }
 
 function mapMembership(r: MembershipRow): Membership {
-  return {
+  const base = {
     id: r.id,
     groupId: r.group_id,
     userId: r.user_id,
@@ -220,4 +230,5 @@ function mapMembership(r: MembershipRow): Membership {
     joinOrder: Number(r.join_order),
     state: r.state as Membership['state'],
   };
+  return r.turn_position == null ? base : { ...base, turnPosition: Number(r.turn_position) };
 }

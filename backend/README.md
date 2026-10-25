@@ -133,9 +133,9 @@ member — 403 with the missing items otherwise (ADR-12).
 | `POST /wallets/:id/withdraw` | Start an M-Pesa B2C payout from your wallet (reserves the funds) |
 | `POST /mpesa/callbacks/stk` | Daraja STK callback → credits the wallet on success |
 | `POST /mpesa/callbacks/b2c` | Daraja B2C result → finalises or refunds the withdrawal |
-| `POST /groups/:id/start` | Fund every member's hold, activate, stamp `start_at` (member-only) |
+| `POST /groups/:id/secure` | Post your security to claim a turn (position is first-come-first-served); locks your hold; the last secure activates the group (member-only, verified) |
 | `POST /groups/:id/settle-due` | Settle any hours due now (member-only; same path the scheduler uses) |
-| `GET /groups/:id` | Your position + balance and the turn order (other members' balances are not exposed; member-only) |
+| `GET /groups/:id` | Your turn position, balance, and `yourTurnAt` (countdown target); the turn order and counts (other members' balances are not exposed; member-only) |
 | `GET /wallets/:id` | Balance + entry history (owner-only) |
 
 The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
@@ -143,6 +143,16 @@ on an interval: for each active group it settles every hour that has come
 due (`dueMaxHour` from `start_at`), idempotently, and on the final hour
 releases holds and marks the group completed. The "hour" duration is
 configurable (`HOUR_MS`) so a pilot or a test can run accelerated time.
+
+## Turn order & countdown (ADR-13)
+
+Payout order is **first-come-first-served by who posts their security**, not
+join order. `POST /groups/:id/secure` assigns `turn_position` in secure order
+and locks that position's hold (`(N − position) × contribution` — securing
+earlier means an earlier turn and a larger hold, since you owe more
+afterwards). The group activates when everyone has secured; the engine pays
+`turn_position` p at hour p−1. `GET /groups/:id` returns `yourTurnAt`
+(`start_at + (position−1) hours`) so the client can count down to your turn.
 
 ## M-Pesa (Daraja) — build spec §7
 

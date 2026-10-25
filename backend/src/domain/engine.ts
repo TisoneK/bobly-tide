@@ -105,9 +105,10 @@ export function settleHour(
 
   const active = memberships
     .filter((m) => m.groupId === group.id && m.state === 'active')
-    .sort((a, b) => a.joinOrder - b.joinOrder);
+    .sort((a, b) => (a.turnPosition ?? 0) - (b.turnPosition ?? 0));
 
-  const turnHolder = active.find((m) => m.joinOrder === hourIndex + 1);
+  // Payout order is the security-posting order (turnPosition), not join order.
+  const turnHolder = active.find((m) => m.turnPosition === hourIndex + 1);
   // Idempotent short-circuit: if this hour was already settled, report it
   // without touching the ledger. (turnHolder is resolved first only for the
   // result shape; the real guard is the fee key.)

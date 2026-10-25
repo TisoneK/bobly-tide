@@ -9,22 +9,54 @@ void main() {
     expect(formatKes('-1'), 'KES -1.00');
   });
 
-  test('GroupView.fromJson parses state, size and members', () {
+  test('GroupView.fromJson parses state, counts, your turn and members', () {
+    final g = GroupView.fromJson({
+      'id': 'g1',
+      'state': 'active',
+      'startAt': '2026-01-01T00:00:00Z',
+      'size': 24,
+      'joined': 24,
+      'securedCount': 24,
+      'yourPosition': 3,
+      'yourSecured': true,
+      'yourTurnAt': '2026-01-01T02:00:00Z',
+      'yourBalance': '22.8',
+      'members': [
+        {'joinOrder': 1, 'turnPosition': 3, 'state': 'active', 'isYou': true},
+        {'joinOrder': 2, 'turnPosition': null, 'state': 'active', 'isYou': false},
+      ],
+    });
+    expect(g.isActive, true);
+    expect(g.size, 24);
+    expect(g.joined, 24);
+    expect(g.securedCount, 24);
+    expect(g.yourPosition, 3);
+    expect(g.yourSecured, true);
+    expect(g.yourTurnAt, '2026-01-01T02:00:00Z');
+    expect(g.members.first.turnPosition, 3);
+    expect(g.members.last.turnPosition, isNull);
+  });
+
+  test('GroupView.fromJson handles an unsecured member in a filling group', () {
     final g = GroupView.fromJson({
       'id': 'g1',
       'state': 'filling',
       'startAt': null,
       'size': 24,
-      'platform': '0',
+      'joined': 1,
+      'securedCount': 0,
+      'yourPosition': null,
+      'yourSecured': false,
+      'yourTurnAt': null,
+      'yourBalance': '0',
       'members': [
-        {'membershipId': 'm1', 'walletId': 'w1', 'joinOrder': 1, 'state': 'active', 'balance': '22.8'},
+        {'joinOrder': 1, 'turnPosition': null, 'state': 'active', 'isYou': true},
       ],
     });
     expect(g.isFilling, true);
-    expect(g.size, 24);
-    expect(g.filled, 1);
     expect(g.slotsRemaining, 23);
-    expect(g.members.single.joinOrder, 1);
+    expect(g.yourPosition, isNull);
+    expect(g.yourSecured, false);
   });
 
   test('WalletView.fromJson parses balance and entries', () {

@@ -122,7 +122,12 @@ describe('HTTP API (e2e)', () => {
 
     for (let i = 0; i < pkg.size; i++) await fund(http, tokens[i]!, wallets[i]!, '24');
 
-    await request(http).post(`/groups/${groupId}/start`).set('Authorization', tokens[0]!).expect(201);
+    // Each member posts their security (FCFS); the last secure activates the group.
+    for (let i = 0; i < pkg.size; i++) {
+      const res = await request(http).post(`/groups/${groupId}/secure`).set('Authorization', tokens[i]!).expect(201);
+      expect(res.body.turnPosition).toBe(i + 1);
+    }
+
     const settled = await request(http)
       .post(`/groups/${groupId}/settle-due`)
       .set('Authorization', tokens[0]!)
@@ -130,9 +135,32 @@ describe('HTTP API (e2e)', () => {
     expect(settled.body.settled).toBeGreaterThanOrEqual(1);
 
     const group = await request(http).get(`/groups/${groupId}`).set('Authorization', tokens[0]!).expect(200);
-    expect(group.body.yourPosition).toBe(1);
+    expect(group.body.state).toBe('active');
+    expect(group.body.yourPosition).toBe(1); // member 0 secured first
+    expect(group.body.yourTurnAt).not.toBeNull(); // countdown target
     expect(group.body.yourBalance).toBe('22.8'); // 24 − 23 hold − 1 + 22.8 payout
     expect(group.body.members).toHaveLength(pkg.size);
+  });
+
+  it('assigns payout position by security order, not join order (FCFS)', async () => {
+    const http = app.getHttpServer();
+    const a = await login(http, phoneFor(1));
+    const b = await login(http, phoneFor(2));
+    await verifyFully(http, a, emailFor(1));
+    await verifyFully(http, b, emailFor(2));
+    const ja = await request(http).post('/packages/daily/join').set('Authorization', a).expect(201);
+    const jb = await request(http).post('/packages/daily/join').set('Authorization', b).expect(201);
+    expect(ja.body.groupId).toBe(jb.body.groupId); // same filling group, A joined first
+
+    // Fund both, then B secures BEFORE A.
+    await fund(http, b, jb.body.walletId, '24');
+    await fund(http, a, ja.body.walletId, '24');
+    const sb = await request(http).post(`/groups/${jb.body.groupId}/secure`).set('Authorization', b).expect(201);
+    const sa = await request(http).post(`/groups/${ja.body.groupId}/secure`).set('Authorization', a).expect(201);
+
+    // B secured first → position 1, though A joined first.
+    expect(sb.body.turnPosition).toBe(1);
+    expect(sa.body.turnPosition).toBe(2);
   });
 
   it('blocks joining and spending until the member is verified', async () => {

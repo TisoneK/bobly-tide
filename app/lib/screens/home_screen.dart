@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets/format.dart';
 import '../widgets/ui.dart';
 import 'group_screen.dart';
+import 'verification_screen.dart';
 import 'wallet_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -18,10 +19,26 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _loading = false;
+  late Future<VerificationStatus> _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = ref.read(apiClientProvider).verificationStatus();
+  }
+
+  void _refreshStatus() {
+    setState(() => _status = ref.read(apiClientProvider).verificationStatus());
+  }
 
   void _signOut() {
     ref.read(membershipProvider.notifier).clear();
     ref.read(sessionProvider.notifier).clear();
+  }
+
+  Future<void> _openVerification() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VerificationScreen()));
+    _refreshStatus(); // reflect any items completed while away
   }
 
   Future<void> _join() async {
@@ -54,8 +71,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (membership != null)
             _YourGroupCard(membership: membership)
           else
-            _JoinCard(loading: _loading, onJoin: _join),
+            FutureBuilder<VerificationStatus>(
+              future: _status,
+              builder: (context, snap) {
+                if (!snap.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return snap.data!.verified
+                    ? _JoinCard(loading: _loading, onJoin: _join)
+                    : _VerifyCard(onVerify: _openVerification);
+              },
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _VerifyCard extends StatelessWidget {
+  final VoidCallback onVerify;
+  const _VerifyCard({required this.onVerify});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Verify to join', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Confirm your email, ID, face and address before joining a group or moving money.',
+                style: TextStyle(color: BoblyColors.slate)),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onVerify, child: const Text('Verify my identity')),
+          ],
+        ),
       ),
     );
   }

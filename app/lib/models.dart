@@ -44,12 +44,19 @@ abstract final class DailyPackage {
 /// members' balances are not exposed by the backend.
 class GroupMemberView {
   final int joinOrder;
+  final int? turnPosition; // null until secured
   final String state;
   final bool isYou;
-  const GroupMemberView({required this.joinOrder, required this.state, required this.isYou});
+  const GroupMemberView({
+    required this.joinOrder,
+    required this.turnPosition,
+    required this.state,
+    required this.isYou,
+  });
 
   factory GroupMemberView.fromJson(Map<String, dynamic> j) => GroupMemberView(
         joinOrder: (j['joinOrder'] as num).toInt(),
+        turnPosition: (j['turnPosition'] as num?)?.toInt(),
         state: j['state'] as String,
         isYou: j['isYou'] as bool? ?? false,
       );
@@ -60,7 +67,11 @@ class GroupView {
   final String state; // filling | active | completed | dissolved
   final String? startAt;
   final int size;
-  final int yourPosition;
+  final int joined;
+  final int securedCount;
+  final int? yourPosition; // turn position, null until secured
+  final bool yourSecured;
+  final String? yourTurnAt; // ISO time your turn begins (countdown target)
   final String yourBalance;
   final List<GroupMemberView> members;
   const GroupView({
@@ -68,13 +79,16 @@ class GroupView {
     required this.state,
     required this.startAt,
     required this.size,
+    required this.joined,
+    required this.securedCount,
     required this.yourPosition,
+    required this.yourSecured,
+    required this.yourTurnAt,
     required this.yourBalance,
     required this.members,
   });
 
-  int get filled => members.length;
-  int get slotsRemaining => size - filled;
+  int get slotsRemaining => size - joined;
   bool get isFilling => state == 'filling';
   bool get isActive => state == 'active';
 
@@ -83,11 +97,29 @@ class GroupView {
         state: j['state'] as String,
         startAt: j['startAt'] as String?,
         size: (j['size'] as num).toInt(),
-        yourPosition: (j['yourPosition'] as num).toInt(),
+        joined: (j['joined'] as num?)?.toInt() ?? 0,
+        securedCount: (j['securedCount'] as num?)?.toInt() ?? 0,
+        yourPosition: (j['yourPosition'] as num?)?.toInt(),
+        yourSecured: j['yourSecured'] as bool? ?? false,
+        yourTurnAt: j['yourTurnAt'] as String?,
         yourBalance: j['yourBalance'].toString(),
         members: ((j['members'] as List?) ?? const [])
             .map((m) => GroupMemberView.fromJson(m as Map<String, dynamic>))
             .toList(),
+      );
+}
+
+/// A member's KYC status (GET /verification).
+class VerificationStatus {
+  final Map<String, String> items; // kind -> status
+  final List<String> missing;
+  final bool verified;
+  const VerificationStatus({required this.items, required this.missing, required this.verified});
+
+  factory VerificationStatus.fromJson(Map<String, dynamic> j) => VerificationStatus(
+        items: ((j['items'] as Map?) ?? const {}).map((k, v) => MapEntry(k.toString(), v.toString())),
+        missing: ((j['missing'] as List?) ?? const []).map((e) => e.toString()).toList(),
+        verified: j['verified'] as bool? ?? false,
       );
 }
 

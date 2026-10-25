@@ -15,9 +15,11 @@ they live in the product spec and this spec points at them.
 > hourly engine (§6), the security-hold mechanism (§8, ADR-5), PostgreSQL
 > persistence with migrations (ADR-6), a NestJS HTTP API + hourly scheduler
 > (ADR-7), M-Pesa Daraja top-up/withdrawal with callback-as-truth (§7,
-> ADR-8), phone + OTP auth guarding the API (§8, ADR-9), and tiered KYC
-> verification gating joins/money (§6, ADR-12) — §14 steps 1–3, covered by a
-> 61-test suite. A Flutter member client (§14 step 4, ADR-10) lives in
+> ADR-8), phone + OTP auth guarding the API (§8, ADR-9), tiered KYC
+> verification gating joins/money (§6, ADR-12), and first-come-first-served
+> turn order (payout position = security-posting order) with a turn
+> countdown (ADR-13) — §14 steps 1–3, covered by a 62-test suite. A Flutter
+> member client (§14 step 4, ADR-10) lives in
 > [`app/`](app/): sign-up/OTP, package, join/queue, group/turn, wallet +
 > receipts — authored but not yet compiled (no Flutter SDK in the build
 > env). Member-journey hardening done (ADR-11): a package→group join tied to

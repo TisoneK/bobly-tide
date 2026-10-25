@@ -33,6 +33,7 @@ export function seedFullGroup(pkg: Package, repo: LedgerRepo, opts: SeedOptions 
       userId: `user-${id}`,
       walletId,
       joinOrder: i + 1,
+      turnPosition: i + 1, // seed: turn order = join order
       state: 'active',
     });
 

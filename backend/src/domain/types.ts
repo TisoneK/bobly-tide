@@ -49,8 +49,14 @@ export interface Membership {
   readonly groupId: GroupId;
   readonly userId: string;
   readonly walletId: WalletId;
-  /** 1..N; also the member's turn position (hour_index + 1). */
+  /** 1..N, the order the member joined the group (queue display only). */
   readonly joinOrder: number;
+  /**
+   * 1..N, the payout turn — assigned first-come-first-served when the member
+   * posts their security. The engine pays position p at hour p-1. Undefined
+   * until secured; always set for an active group.
+   */
+  readonly turnPosition?: number;
   state: 'active' | 'defaulted' | 'left';
 }
 

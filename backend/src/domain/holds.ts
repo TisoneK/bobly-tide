@@ -64,7 +64,10 @@ export function fundHold(
 ): Money {
   const idGen = deps.idGen ?? randomUUID;
   const clock = deps.clock ?? (() => new Date());
-  const required = requiredHold(pkg, membership.joinOrder);
+  if (membership.turnPosition == null) {
+    throw new Error(`membership ${membership.id} has no turn position (not secured)`);
+  }
+  const required = requiredHold(pkg, membership.turnPosition);
   if (required.isZero()) return Money.zero();
 
   const marker = `hold:fund:${membership.id}`;

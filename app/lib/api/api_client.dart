@@ -26,10 +26,24 @@ class ApiClient {
   Future<Session> verifyOtp(String phone, String code) async =>
       Session.fromJson(await _post('/auth/otp/verify', {'phone': phone, 'code': code}));
 
+  // --- verification (require a token) ---
+  Future<VerificationStatus> verificationStatus() async =>
+      VerificationStatus.fromJson(await _get('/verification'));
+
+  Future<void> requestEmailCode(String email) => _post('/verification/email/request', {'email': email});
+
+  Future<void> verifyEmailCode(String code) => _post('/verification/email/verify', {'code': code});
+
+  Future<void> submitKyc(String kind, String reference) =>
+      _post('/verification/submit', {'kind': kind, 'reference': reference});
+
   // --- groups / wallets (require a token) ---
   /// Join the Daily package; the server allocates a filling group.
   Future<JoinResult> joinDaily() async =>
       JoinResult.fromJson(await _post('/packages/daily/join', const {}));
+
+  /// Post your security to claim a turn (position is first-come-first-served).
+  Future<void> secure(String groupId) => _post('/groups/$groupId/secure', const {});
 
   Future<GroupView> getGroup(String groupId) async => GroupView.fromJson(await _get('/groups/$groupId'));
 

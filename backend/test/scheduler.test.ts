@@ -31,7 +31,10 @@ async function setup() {
 async function startedGroup(repo: PgLedgerRepo, store: GroupStore, startAt: Date) {
   const group = await store.createGroup();
   for (let i = 0; i < pkg.size; i++) await store.joinGroupAsNewUser(group.id, pkg);
-  const loaded = await store.getGroup(group.id);
+  // Secure each member in join order (turn position = join order for the test).
+  let loaded = await store.getGroup(group.id);
+  for (const m of loaded.memberships) await store.setTurnPosition(m.id, m.joinOrder, T0);
+  loaded = await store.getGroup(group.id);
   const walletIds = loaded.memberships.map((m) => m.walletId);
 
   await withLedger(repo, walletIds, (mem) => {
