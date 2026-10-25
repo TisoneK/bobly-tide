@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Authored the Flutter member client (app/) against the backend API | Working | Backend §14 steps 1-3 + Flutter client (step 4) done. Next: pilot hardening (§14 step 5) |
+| Mara | S002 | claude-opus-4-8 | Member-journey hardening done; now building KYC verification + security-order turns/countdown | Working | Hardening committed (ADR-11); starting the two new features |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
