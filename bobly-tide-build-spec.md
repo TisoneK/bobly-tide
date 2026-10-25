@@ -16,7 +16,11 @@ they live in the product spec and this spec points at them.
 > persistence with migrations (ADR-6), a NestJS HTTP API + hourly scheduler
 > (ADR-7), M-Pesa Daraja top-up/withdrawal with callback-as-truth (§7,
 > ADR-8), and phone + OTP auth guarding the API (§8, ADR-9) — §14 steps
-> 1–3, all covered by a 55-test suite. Next: the Flutter client.
+> 1–3, all covered by a 55-test suite. A Flutter member client (§14 step 4,
+> ADR-10) lives in [`app/`](app/): sign-up/OTP, package, join/queue,
+> group/turn, wallet + receipts — authored but not yet compiled (no Flutter
+> SDK in the build env). Next: harden for the pilot (wire gates, close the
+> auth/ownership + Daraja follow-ups) and verify the app on a device.
 
 ---
 
@@ -333,7 +337,9 @@ spec consumes them as config, it does not decide them.
    callback-as-truth (§7, ADR-8), and phone + OTP auth issuing session
    tokens and guarding the group/wallet routes (§8, ADR-9). Follow-up:
    per-resource ownership checks and tying a join to the authed user.
-4. Flutter app: sign-up/OTP, package screen, queue, group/turn view,
-   wallet + receipts, notifications.
+4. ✅ Flutter app (`app/`, ADR-10): sign-up/OTP, package screen, join/queue,
+   group/turn view, wallet + receipts — authored against the API, not yet
+   compiled (no Flutter SDK in the build env). Still to do here:
+   notifications, verify on a device.
 5. Wire gates (`gates.conf`), run a full-cycle scenario test, then the
    invited closed pilot.
