@@ -13,6 +13,11 @@ export const AUTH_STORE = Symbol('AUTH_STORE');
 export const AUTH_SERVICE = Symbol('AUTH_SERVICE');
 export const AUTH_CONFIG = Symbol('AUTH_CONFIG');
 export const SMS_SENDER = Symbol('SMS_SENDER');
+export const VERIFICATION_STORE = Symbol('VERIFICATION_STORE');
+export const VERIFICATION_SERVICE = Symbol('VERIFICATION_SERVICE');
+export const VERIFICATION_CONFIG = Symbol('VERIFICATION_CONFIG');
+export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
+export const KYC_PROVIDER = Symbol('KYC_PROVIDER');
 
 export interface SchedulerConfig {
   /** Start the background interval. Off in tests (they drive ticks directly). */

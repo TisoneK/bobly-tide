@@ -8,6 +8,9 @@ import type { DarajaClient } from '../mpesa/daraja';
 import { MpesaService, type MpesaConfig } from '../mpesa/mpesa.service';
 import { MpesaStore } from '../mpesa/mpesa.store';
 import { PgLedgerRepo } from '../repo/pg';
+import type { EmailSender, KycProvider } from '../verification/providers';
+import { VerificationService, type VerificationConfig } from '../verification/verification.service';
+import { VerificationStore } from '../verification/verification.store';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { GroupStore } from './group.store';
@@ -20,7 +23,9 @@ import {
   AUTH_SERVICE,
   AUTH_STORE,
   DARAJA_CLIENT,
+  EMAIL_SENDER,
   GROUP_STORE,
+  KYC_PROVIDER,
   LEDGER_REPO,
   MPESA_CONFIG,
   MPESA_SERVICE,
@@ -29,8 +34,12 @@ import {
   POOL,
   SCHEDULER_CONFIG,
   SMS_SENDER,
+  VERIFICATION_CONFIG,
+  VERIFICATION_SERVICE,
+  VERIFICATION_STORE,
   type SchedulerConfig,
 } from './tokens';
+import { VerificationController } from './verification.controller';
 import { WalletsController } from './wallets.controller';
 
 export interface AppModuleOptions {
@@ -41,6 +50,9 @@ export interface AppModuleOptions {
   mpesa: MpesaConfig;
   auth: AuthConfig;
   sms: SmsSender;
+  email: EmailSender;
+  kyc: KycProvider;
+  verification: VerificationConfig;
 }
 
 @Module({})
@@ -48,7 +60,14 @@ export class AppModule {
   static forRoot(opts: AppModuleOptions): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, GroupsController, PackagesController, WalletsController, MpesaController],
+      controllers: [
+        AuthController,
+        VerificationController,
+        GroupsController,
+        PackagesController,
+        WalletsController,
+        MpesaController,
+      ],
       providers: [
         { provide: POOL, useValue: opts.pool },
         { provide: PACKAGE, useValue: opts.pkg },
@@ -57,10 +76,14 @@ export class AppModule {
         { provide: MPESA_CONFIG, useValue: opts.mpesa },
         { provide: AUTH_CONFIG, useValue: opts.auth },
         { provide: SMS_SENDER, useValue: opts.sms },
+        { provide: EMAIL_SENDER, useValue: opts.email },
+        { provide: KYC_PROVIDER, useValue: opts.kyc },
+        { provide: VERIFICATION_CONFIG, useValue: opts.verification },
         { provide: LEDGER_REPO, useFactory: (p: Pool) => new PgLedgerRepo(p), inject: [POOL] },
         { provide: GROUP_STORE, useFactory: (p: Pool) => new GroupStore(p), inject: [POOL] },
         { provide: MPESA_STORE, useFactory: (p: Pool) => new MpesaStore(p), inject: [POOL] },
         { provide: AUTH_STORE, useFactory: (p: Pool) => new AuthStore(p), inject: [POOL] },
+        { provide: VERIFICATION_STORE, useFactory: (p: Pool) => new VerificationStore(p), inject: [POOL] },
         {
           provide: MPESA_SERVICE,
           useFactory: (ledger: PgLedgerRepo, store: MpesaStore, daraja: DarajaClient, cfg: MpesaConfig) =>
@@ -71,6 +94,12 @@ export class AppModule {
           provide: AUTH_SERVICE,
           useFactory: (store: AuthStore, sms: SmsSender, cfg: AuthConfig) => new AuthService(store, sms, cfg),
           inject: [AUTH_STORE, SMS_SENDER, AUTH_CONFIG],
+        },
+        {
+          provide: VERIFICATION_SERVICE,
+          useFactory: (store: VerificationStore, email: EmailSender, kyc: KycProvider, cfg: VerificationConfig) =>
+            new VerificationService(store, email, kyc, cfg),
+          inject: [VERIFICATION_STORE, EMAIL_SENDER, KYC_PROVIDER, VERIFICATION_CONFIG],
         },
         AuthGuard,
         SchedulerService,

@@ -115,13 +115,18 @@ group/package/wallet routes and the M-Pesa top-up/withdraw require a
 callbacks are public. Beyond authentication, routes **authorize per
 resource**: a wallet route requires you to own the wallet (403 otherwise),
 and group start/settle-due/view require you to be a member of the group
-(ADR-11).
+(ADR-11). Joining a group and moving money also require a **fully verified**
+member — 403 with the missing items otherwise (ADR-12).
 
 | Method + path | Does |
 |---|---|
 | `POST /auth/otp/request` | Send a one-time code by SMS (public) |
 | `POST /auth/otp/verify` | Verify the code, return a session token (public) |
-| `POST /packages/daily/join` | Join the Daily package; server allocates a filling group, ties membership to you |
+| `GET /verification` | Your KYC status + which items are still missing |
+| `POST /verification/email/request` | Email a 6-digit confirmation code |
+| `POST /verification/email/verify` | Confirm the email code |
+| `POST /verification/submit` | Submit an id / face / address document for review |
+| `POST /packages/daily/join` | Join the Daily package (verified members); server allocates a filling group |
 | `POST /groups` | Create an empty Daily group (operational) |
 | `POST /groups/:id/join` | Join this specific group as the authenticated user |
 | `POST /wallets/:id/topup` | Start an M-Pesa STK push on your wallet (needs `amount`, `phone`) |
@@ -176,10 +181,26 @@ callback** (ADR-8):
 - Secrets come from env (`.env.example`); none in code. If `AUTH_JWT_SECRET`
   is unset the server generates an ephemeral one (dev only) and warns.
 
+## Verification / KYC (build spec §6, ADR-12)
+
+- A phone sign-in lets a member look around, but **joining a group and any
+  M-Pesa transaction require full verification** — email + id + face +
+  address (the required set is configurable via `VERIFICATION_REQUIRED`).
+- Email is self-service: `POST /verification/email/request` emails a hashed,
+  short-lived code; `POST /verification/email/verify` confirms it.
+- id / face / address go to a `KycProvider` (`src/verification/providers.ts`).
+  No real vendor is wired, so submissions stay **pending** unless
+  `KYC_AUTO_APPROVE=true` (demo only). A real vendor (e.g. Smile ID) resolves
+  them asynchronously — plug it in behind the interface.
+- `GET /verification` returns each item's status and what's missing.
+
+> Follow-up: a KYC-provider callback/review flow and an ops console to
+> approve or reject pending submissions (there is no admin role yet).
+
 ## Not built yet (next steps, build spec §14)
 
-- An admin/ops role (so create/start/settle aren't member-gated) and
-  per-user group-join limits (product spec §8.5).
+- An admin/ops role (so create/start/settle aren't member-gated, and to
+  review KYC submissions) and per-user group-join limits (product spec §8.5).
 - The Flutter client runs against this API but is unverified (no SDK here);
   secure-storage for its token.
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against

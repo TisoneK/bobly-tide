@@ -5,11 +5,19 @@ import type { Membership, Package } from '../domain/types';
 import { accountIdsForGroup, withLedger } from '../pg-settlement';
 import type { PgLedgerRepo } from '../repo/pg';
 import { settleDueHours } from '../scheduler';
+import type { VerificationService } from '../verification/verification.service';
 import { AuthGuard } from './auth.guard';
 import { CurrentUser } from './current-user.decorator';
 import { GroupNotJoinableError, type GroupStore, type LoadedGroup } from './group.store';
 import { toHttp } from './errors';
-import { GROUP_STORE, LEDGER_REPO, PACKAGE, SCHEDULER_CONFIG, type SchedulerConfig } from './tokens';
+import {
+  GROUP_STORE,
+  LEDGER_REPO,
+  PACKAGE,
+  SCHEDULER_CONFIG,
+  VERIFICATION_SERVICE,
+  type SchedulerConfig,
+} from './tokens';
 
 @Controller('groups')
 @UseGuards(AuthGuard)
@@ -19,6 +27,7 @@ export class GroupsController {
     @Inject(GROUP_STORE) private readonly store: GroupStore,
     @Inject(PACKAGE) private readonly pkg: Package,
     @Inject(SCHEDULER_CONFIG) private readonly config: SchedulerConfig,
+    @Inject(VERIFICATION_SERVICE) private readonly verification: VerificationService,
   ) {}
 
   /** Operational: create an empty filling group. (Members normally reach a
@@ -33,6 +42,7 @@ export class GroupsController {
   @Post(':id/join')
   async join(@Param('id') id: string, @CurrentUser() user: SessionClaims) {
     try {
+      await this.verification.requireVerified(user.sub);
       const m = await this.store.createMembershipForUser(id, user.sub, this.pkg);
       return { groupId: id, membershipId: m.id, walletId: m.walletId, joinOrder: m.joinOrder };
     } catch (e) {

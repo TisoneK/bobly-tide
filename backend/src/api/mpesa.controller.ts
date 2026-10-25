@@ -1,12 +1,13 @@
 import { Body, Controller, HttpCode, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import type { SessionClaims } from '../auth/auth.service';
 import type { MpesaService } from '../mpesa/mpesa.service';
+import type { VerificationService } from '../verification/verification.service';
 import { AuthGuard } from './auth.guard';
 import { CurrentUser } from './current-user.decorator';
 import { toHttp } from './errors';
 import type { GroupStore } from './group.store';
 import { requireWalletOwner } from './ownership';
-import { GROUP_STORE, MPESA_SERVICE } from './tokens';
+import { GROUP_STORE, MPESA_SERVICE, VERIFICATION_SERVICE } from './tokens';
 import { requirePhone, wholeAmount } from './validation';
 
 @Controller()
@@ -14,6 +15,7 @@ export class MpesaController {
   constructor(
     @Inject(MPESA_SERVICE) private readonly mpesa: MpesaService,
     @Inject(GROUP_STORE) private readonly store: GroupStore,
+    @Inject(VERIFICATION_SERVICE) private readonly verification: VerificationService,
   ) {}
 
   /** Start a top-up: prompts the member's phone via STK push. The wallet is
@@ -28,6 +30,7 @@ export class MpesaController {
     const amount = wholeAmount(body?.amount);
     const phone = requirePhone(body?.phone);
     try {
+      await this.verification.requireVerified(user.sub);
       await requireWalletOwner(this.store, accountId, user);
       return await this.mpesa.initiateTopup(accountId, amount, phone);
     } catch (e) {
@@ -46,6 +49,7 @@ export class MpesaController {
     const amount = wholeAmount(body?.amount);
     const phone = requirePhone(body?.phone);
     try {
+      await this.verification.requireVerified(user.sub);
       await requireWalletOwner(this.store, accountId, user);
       return await this.mpesa.initiateWithdrawal(accountId, amount, phone);
     } catch (e) {

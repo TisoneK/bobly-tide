@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
@@ -11,6 +12,7 @@ import { InvalidOtpError, OtpLockedError } from '../auth/auth.service';
 import { ShortfallError } from '../domain/engine';
 import { InsufficientFundsForHoldError } from '../domain/holds';
 import { BelowMinimumError, InsufficientBalanceError } from '../mpesa/mpesa.service';
+import { InvalidEmailCodeError, VerificationRequiredError } from '../verification/verification.service';
 import { AlreadyJoinedError, GroupNotFoundError, GroupNotJoinableError } from './group.store';
 
 /** Map a domain error to the right HTTP status. */
@@ -25,5 +27,7 @@ export function toHttp(e: unknown): HttpException {
   if (e instanceof BelowMinimumError) return new BadRequestException(e.message);
   if (e instanceof InvalidOtpError) return new UnauthorizedException(e.message);
   if (e instanceof OtpLockedError) return new HttpException(e.message, HttpStatus.TOO_MANY_REQUESTS);
+  if (e instanceof InvalidEmailCodeError) return new BadRequestException(e.message);
+  if (e instanceof VerificationRequiredError) return new ForbiddenException(e.message);
   return new InternalServerErrorException((e as Error).message);
 }

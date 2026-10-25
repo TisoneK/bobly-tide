@@ -13,13 +13,16 @@ import { DAILY_PACKAGE } from '../src/domain/packages';
 import { runMigrations } from '../src/db/migrate';
 import { FakeDarajaClient } from '../src/mpesa/daraja';
 import { ONE_HOUR_MS } from '../src/scheduler';
+import { FakeEmailSender, FakeKycProvider } from '../src/verification/providers';
 
 const pkg = DAILY_PACKAGE;
 const phoneFor = (i: number) => `2547${i.toString().padStart(8, '0')}`;
+const emailFor = (i: number) => `member${i}@example.com`;
 
 describe('HTTP API (e2e)', () => {
   let app: INestApplication;
   let sms: FakeSmsSender;
+  let email: FakeEmailSender;
 
   type Http = ReturnType<INestApplication['getHttpServer']>;
 
@@ -29,6 +32,23 @@ describe('HTTP API (e2e)', () => {
     const code = sms.codeFor(phone)!;
     const res = await request(http).post('/auth/otp/verify').send({ phone, code }).expect(200);
     return `Bearer ${res.body.token}`;
+  }
+
+  /** Complete every KYC item for the logged-in member. */
+  async function verifyFully(http: Http, bearer: string, addr: string) {
+    await request(http).post('/verification/email/request').set('Authorization', bearer).send({ email: addr }).expect(200);
+    await request(http)
+      .post('/verification/email/verify')
+      .set('Authorization', bearer)
+      .send({ code: email.codeFor(addr) })
+      .expect(200);
+    for (const kind of ['id', 'face', 'address']) {
+      await request(http)
+        .post('/verification/submit')
+        .set('Authorization', bearer)
+        .send({ kind, reference: `${kind}-ref` })
+        .expect(201);
+    }
   }
 
   /** Fund a wallet the real way: STK push (owner's token), then the callback. */
@@ -50,6 +70,7 @@ describe('HTTP API (e2e)', () => {
     await runMigrations(pool);
     await new GroupStore(pool).ensureDailyPackage(pkg);
     sms = new FakeSmsSender();
+    email = new FakeEmailSender();
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -61,6 +82,14 @@ describe('HTTP API (e2e)', () => {
           mpesa: { withdrawalMin: Money.of('50') },
           auth: { jwtSecret: 'test-secret', otpTtlSec: 300, tokenTtlSec: 3600, maxAttempts: 5 },
           sms,
+          email,
+          kyc: new FakeKycProvider(true),
+          verification: {
+            secret: 'test-secret',
+            requiredKinds: ['email', 'id', 'face', 'address'],
+            emailCodeTtlSec: 600,
+            maxAttempts: 5,
+          },
         }),
       ],
     }).compile();
@@ -80,6 +109,7 @@ describe('HTTP API (e2e)', () => {
     const groupIds: string[] = [];
     for (let i = 1; i <= pkg.size; i++) {
       const bearer = await login(http, phoneFor(i));
+      await verifyFully(http, bearer, emailFor(i));
       const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
       tokens.push(bearer);
       wallets.push(join.body.walletId);
@@ -105,10 +135,25 @@ describe('HTTP API (e2e)', () => {
     expect(group.body.members).toHaveLength(pkg.size);
   });
 
+  it('blocks joining and spending until the member is verified', async () => {
+    const http = app.getHttpServer();
+    const bearer = await login(http, phoneFor(7));
+    // Not verified yet → join is forbidden.
+    await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(403);
+    const status = await request(http).get('/verification').set('Authorization', bearer).expect(200);
+    expect(status.body.verified).toBe(false);
+    expect(status.body.missing.sort()).toEqual(['address', 'email', 'face', 'id']);
+    // After full KYC, join succeeds.
+    await verifyFully(http, bearer, emailFor(7));
+    await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
+  });
+
   it('ties a join to the caller and refuses acting on another member\'s wallet', async () => {
     const http = app.getHttpServer();
     const a = await login(http, phoneFor(1));
     const b = await login(http, phoneFor(2));
+    await verifyFully(http, a, emailFor(1));
+    await verifyFully(http, b, emailFor(2));
     const ja = await request(http).post('/packages/daily/join').set('Authorization', a).expect(201);
     const jb = await request(http).post('/packages/daily/join').set('Authorization', b).expect(201);
     expect(ja.body.groupId).toBe(jb.body.groupId); // same filling group
@@ -137,6 +182,7 @@ describe('HTTP API (e2e)', () => {
   it('rejects an invalid top-up amount on your own wallet', async () => {
     const http = app.getHttpServer();
     const bearer = await login(http, phoneFor(1));
+    await verifyFully(http, bearer, emailFor(1));
     const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
     await request(http)
       .post(`/wallets/${join.body.walletId}/topup`)

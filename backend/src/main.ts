@@ -10,6 +10,8 @@ import { Money } from './domain/money';
 import { DAILY_PACKAGE } from './domain/packages';
 import { type DarajaClient, FakeDarajaClient, HttpDarajaClient } from './mpesa/daraja';
 import { ONE_HOUR_MS } from './scheduler';
+import { FakeKycProvider, LogEmailSender } from './verification/providers';
+import type { VerificationKind } from './verification/verification.store';
 
 const url = process.env['DATABASE_URL'];
 if (!url) {
@@ -48,6 +50,22 @@ function jwtSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
+function buildKyc(): FakeKycProvider {
+  const auto = env['KYC_AUTO_APPROVE'] === 'true';
+  if (auto) {
+    console.warn('KYC_AUTO_APPROVE=true — document/face/address submissions auto-verify (demo only)');
+  } else {
+    console.warn('No real KYC provider wired — id/face/address submissions stay pending until reviewed');
+  }
+  return new FakeKycProvider(auto);
+}
+
+const jwt = jwtSecret();
+const requiredKinds = (env['VERIFICATION_REQUIRED'] ?? 'email,id,face,address')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean) as VerificationKind[];
+
 const pool = new Pool({ connectionString: url });
 await runMigrations(pool);
 await new GroupStore(pool).ensureDailyPackage(DAILY_PACKAGE);
@@ -64,12 +82,20 @@ const app = await NestFactory.create(
     daraja: buildDaraja(),
     mpesa: { withdrawalMin: Money.of(env['MPESA_WITHDRAWAL_MIN'] ?? '50') },
     auth: {
-      jwtSecret: jwtSecret(),
+      jwtSecret: jwt,
       otpTtlSec: Number(env['AUTH_OTP_TTL_SEC'] ?? 300),
       tokenTtlSec: Number(env['AUTH_TOKEN_TTL_SEC'] ?? 86_400),
       maxAttempts: Number(env['AUTH_OTP_MAX_ATTEMPTS'] ?? 5),
     },
     sms: new LogSmsSender(),
+    email: new LogEmailSender(),
+    kyc: buildKyc(),
+    verification: {
+      secret: jwt,
+      requiredKinds,
+      emailCodeTtlSec: Number(env['VERIFICATION_EMAIL_TTL_SEC'] ?? 600),
+      maxAttempts: Number(env['VERIFICATION_MAX_ATTEMPTS'] ?? 5),
+    },
   }),
 );
 
