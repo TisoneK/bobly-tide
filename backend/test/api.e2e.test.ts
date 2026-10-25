@@ -7,11 +7,14 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/api/app.module';
 import { GroupStore } from '../src/api/group.store';
+import { Money } from '../src/domain/money';
 import { DAILY_PACKAGE } from '../src/domain/packages';
 import { runMigrations } from '../src/db/migrate';
+import { FakeDarajaClient } from '../src/mpesa/daraja';
 import { ONE_HOUR_MS } from '../src/scheduler';
 
 const pkg = DAILY_PACKAGE;
+const PHONE = '254700000000';
 
 describe('HTTP API (e2e)', () => {
   let app: INestApplication;
@@ -28,6 +31,8 @@ describe('HTTP API (e2e)', () => {
           pool,
           pkg,
           scheduler: { enabled: false, tickMs: 60_000, hourMs: ONE_HOUR_MS },
+          daraja: new FakeDarajaClient(),
+          mpesa: { withdrawalMin: Money.of('50') },
         }),
       ],
     }).compile();
@@ -39,7 +44,19 @@ describe('HTTP API (e2e)', () => {
     await app.close();
   });
 
-  it('runs create → join → topup → start → settle, landing correct balances', async () => {
+  /** Fund a wallet the real way: STK push, then the confirming callback. */
+  async function fund(http: ReturnType<INestApplication['getHttpServer']>, walletId: string, amount: string) {
+    const init = await request(http)
+      .post(`/wallets/${walletId}/topup`)
+      .send({ amount, phone: PHONE })
+      .expect(201);
+    await request(http)
+      .post('/mpesa/callbacks/stk')
+      .send({ Body: { stkCallback: { CheckoutRequestID: init.body.checkoutRequestId, ResultCode: 0 } } })
+      .expect(200);
+  }
+
+  it('runs create → join → M-Pesa top-up → start → settle, landing correct balances', async () => {
     const http = app.getHttpServer();
 
     const created = await request(http).post('/groups').expect(201);
@@ -52,9 +69,7 @@ describe('HTTP API (e2e)', () => {
       wallets.push(res.body.walletId);
     }
 
-    for (const walletId of wallets) {
-      await request(http).post(`/wallets/${walletId}/topup`).send({ amount: '24' }).expect(201);
-    }
+    for (const walletId of wallets) await fund(http, walletId, '24');
 
     await request(http).post(`/groups/${groupId}/start`).expect(201);
 
@@ -66,6 +81,28 @@ describe('HTTP API (e2e)', () => {
     // Position 1: 24 topup − 23 hold − 1 debit + 22.8 payout = 22.8 spendable.
     expect(holder.balance).toBe('22.8');
     expect(group.body.platform).toBe('1.2');
+  });
+
+  it('credits a wallet only after the STK callback confirms', async () => {
+    const http = app.getHttpServer();
+    const created = await request(http).post('/groups').expect(201);
+    const joined = await request(http).post(`/groups/${created.body.id}/join`).send({}).expect(201);
+    const walletId = joined.body.walletId as string;
+
+    const init = await request(http)
+      .post(`/wallets/${walletId}/topup`)
+      .send({ amount: '100', phone: PHONE })
+      .expect(201);
+    // Still zero until the callback lands.
+    let w = await request(http).get(`/wallets/${walletId}`).expect(200);
+    expect(w.body.balance).toBe('0');
+
+    await request(http)
+      .post('/mpesa/callbacks/stk')
+      .send({ Body: { stkCallback: { CheckoutRequestID: init.body.checkoutRequestId, ResultCode: 0 } } })
+      .expect(200);
+    w = await request(http).get(`/wallets/${walletId}`).expect(200);
+    expect(w.body.balance).toBe('100');
   });
 
   it('rejects starting a group that is not full', async () => {

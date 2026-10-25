@@ -4,13 +4,39 @@ import { Pool } from 'pg';
 import { AppModule } from './api/app.module';
 import { GroupStore } from './api/group.store';
 import { runMigrations } from './db/migrate';
+import { Money } from './domain/money';
 import { DAILY_PACKAGE } from './domain/packages';
+import { type DarajaClient, FakeDarajaClient, HttpDarajaClient } from './mpesa/daraja';
 import { ONE_HOUR_MS } from './scheduler';
 
 const url = process.env['DATABASE_URL'];
 if (!url) {
   console.error('DATABASE_URL is not set');
   process.exit(1);
+}
+
+const env = process.env;
+
+/** Use the real Daraja client when credentials are configured; otherwise
+ *  fall back to the fake so the service still runs locally (no live M-Pesa). */
+function buildDaraja(): DarajaClient {
+  if (!env['DARAJA_CONSUMER_KEY']) {
+    console.warn('DARAJA_CONSUMER_KEY not set — using FakeDarajaClient (no real M-Pesa calls)');
+    return new FakeDarajaClient();
+  }
+  return new HttpDarajaClient({
+    baseUrl: env['DARAJA_BASE_URL'] ?? 'https://sandbox.safaricom.co.ke',
+    consumerKey: env['DARAJA_CONSUMER_KEY'] ?? '',
+    consumerSecret: env['DARAJA_CONSUMER_SECRET'] ?? '',
+    shortcode: env['DARAJA_SHORTCODE'] ?? '',
+    passkey: env['DARAJA_PASSKEY'] ?? '',
+    stkCallbackUrl: env['DARAJA_STK_CALLBACK_URL'] ?? '',
+    b2cShortcode: env['DARAJA_B2C_SHORTCODE'] ?? '',
+    initiatorName: env['DARAJA_INITIATOR_NAME'] ?? '',
+    securityCredential: env['DARAJA_SECURITY_CREDENTIAL'] ?? '',
+    b2cResultUrl: env['DARAJA_B2C_RESULT_URL'] ?? '',
+    b2cTimeoutUrl: env['DARAJA_B2C_TIMEOUT_URL'] ?? '',
+  });
 }
 
 const pool = new Pool({ connectionString: url });
@@ -23,12 +49,14 @@ const app = await NestFactory.create(
     pkg: DAILY_PACKAGE,
     scheduler: {
       enabled: true,
-      tickMs: Number(process.env['TICK_MS'] ?? 60_000),
-      hourMs: Number(process.env['HOUR_MS'] ?? ONE_HOUR_MS),
+      tickMs: Number(env['TICK_MS'] ?? 60_000),
+      hourMs: Number(env['HOUR_MS'] ?? ONE_HOUR_MS),
     },
+    daraja: buildDaraja(),
+    mpesa: { withdrawalMin: Money.of(env['MPESA_WITHDRAWAL_MIN'] ?? '50') },
   }),
 );
 
-const port = Number(process.env['PORT'] ?? 3000);
+const port = Number(env['PORT'] ?? 3000);
 await app.listen(port);
 console.log(`Bobly Tide API listening on :${port}`);

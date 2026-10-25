@@ -8,7 +8,8 @@ hourly engine, §10 money-correctness rules, §14 build steps) and the
 Stack: Node + TypeScript + PostgreSQL + NestJS (ADR-4). The money engine is
 pure; Postgres persistence is a load-run-persist unit of work (ADR-6) so the
 engine stays synchronous and testable; the HTTP API and hourly scheduler sit
-on top (ADR-7). M-Pesa Daraja comes next.
+on top (ADR-7); M-Pesa (Daraja) moves real money in and out on the
+confirming callback (ADR-8). Auth/OTP and the Flutter client come next.
 
 ## Layout
 
@@ -27,18 +28,21 @@ src/repo/memory.ts     in-memory ledger (pure engine, tests, snapshots)
 src/repo/pg.ts         PgLedgerRepo — durable Postgres ledger store
 src/pg-settlement.ts   unit of work: run the pure engine on a PG snapshot
 src/scheduler.ts       settleDueHours — which hours are due for a group
-src/api/               NestJS app: controllers, GroupStore, scheduler service
-src/main.ts            bootstrap (migrate, ensure package, listen)
+src/mpesa/daraja.ts    DarajaClient: interface + Fake (tests/dev) + Http (real)
+src/mpesa/mpesa.store.ts   mpesa_txn persistence
+src/mpesa/mpesa.service.ts STK/B2C + callback-as-truth into the wallet
+src/api/               NestJS app: controllers, stores, scheduler, M-Pesa
+src/main.ts            bootstrap (migrate, ensure package, pick Daraja, listen)
 src/seed.ts            build a funded test group
 src/index.ts           demo: one full cycle (npm run demo)
-test/                  money / engine / holds / defaults / pg / api / scheduler
+test/                  money / engine / holds / defaults / pg / api / scheduler / mpesa
 ```
 
 ## Run
 
 ```bash
 npm install
-npm test          # full suite (37 tests, incl. Postgres via in-process pg-mem)
+npm test          # full suite (45 tests, incl. Postgres via in-process pg-mem)
 npm run typecheck
 npm run demo      # settle one full Daily cycle and print balances
 ```
@@ -109,7 +113,10 @@ Token-based DI only (this toolchain emits no decorator metadata). Endpoints:
 |---|---|
 | `POST /groups` | Create a Daily group (`filling`) |
 | `POST /groups/:id/join` | Add a member (creates user + wallet); returns `walletId` |
-| `POST /wallets/:id/topup` | Internal/dev credit (stands in for M-Pesa until §7) |
+| `POST /wallets/:id/topup` | Start an M-Pesa STK push (needs `amount`, `phone`); credited on callback |
+| `POST /wallets/:id/withdraw` | Start an M-Pesa B2C payout (reserves the funds) |
+| `POST /mpesa/callbacks/stk` | Daraja STK callback → credits the wallet on success |
+| `POST /mpesa/callbacks/b2c` | Daraja B2C result → finalises or refunds the withdrawal |
 | `POST /groups/:id/start` | Fund every member's hold, activate, stamp `start_at` |
 | `POST /groups/:id/settle-due` | Settle any hours due now (same path the scheduler uses) |
 | `GET /groups/:id` | State, start time, members + balances, platform fee total |
@@ -121,10 +128,33 @@ due (`dueMaxHour` from `start_at`), idempotently, and on the final hour
 releases holds and marks the group completed. The "hour" duration is
 configurable (`HOUR_MS`) so a pilot or a test can run accelerated time.
 
+## M-Pesa (Daraja) — build spec §7
+
+The wallet is the source of truth and moves **only on the confirming
+callback** (ADR-8):
+
+- **Top-up (STK push):** `POST /wallets/:id/topup` initiates; the wallet is
+  credited only when `POST /mpesa/callbacks/stk` reports success. Idempotent
+  on the Daraja `CheckoutRequestID`, so a re-delivered callback never
+  double-credits.
+- **Withdrawal (B2C):** `POST /wallets/:id/withdraw` **reserves** (debits)
+  the funds immediately so they can't be double-spent; a success callback
+  lets the debit stand, a failure callback refunds it. If the B2C call
+  itself fails, the reservation is reversed at once.
+- **Client:** code depends on a `DarajaClient` interface. `FakeDarajaClient`
+  drives tests and credential-less local dev (it makes no real calls — you
+  simulate callbacks by POSTing to the callback endpoints); `HttpDarajaClient`
+  talks to the sandbox/production. `main.ts` picks the real one when
+  `DARAJA_CONSUMER_KEY` is set, else the fake (with a warning).
+- **Secrets:** all Daraja credentials come from env (see `.env.example`);
+  no secret values live in code. `.env` is gitignored; production secrets
+  belong in the deploy platform's store and `.context_ledger/memory/secrets/`.
+
 ## Not built yet (next steps, build spec §14)
 
-- M-Pesa Daraja (STK push top-up + B2C withdrawal), auth/OTP — the top-up
-  endpoint is an internal placeholder until then.
+- Auth/OTP; the Flutter client.
+- `HttpDarajaClient` is written to the Daraja spec but exercised only against
+  the sandbox, not by the unit suite (which uses the fake).
 - Incremental hold release (see the note above); a materialised wallet
   balance if the ledger grows large.
 

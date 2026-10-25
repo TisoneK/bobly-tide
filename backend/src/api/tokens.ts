@@ -5,6 +5,10 @@ export const LEDGER_REPO = Symbol('LEDGER_REPO');
 export const GROUP_STORE = Symbol('GROUP_STORE');
 export const PACKAGE = Symbol('PACKAGE');
 export const SCHEDULER_CONFIG = Symbol('SCHEDULER_CONFIG');
+export const DARAJA_CLIENT = Symbol('DARAJA_CLIENT');
+export const MPESA_STORE = Symbol('MPESA_STORE');
+export const MPESA_CONFIG = Symbol('MPESA_CONFIG');
+export const MPESA_SERVICE = Symbol('MPESA_SERVICE');
 
 export interface SchedulerConfig {
   /** Start the background interval. Off in tests (they drive ticks directly). */
