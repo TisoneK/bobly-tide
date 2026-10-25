@@ -47,18 +47,27 @@ class GroupMemberView {
   final int? turnPosition; // null until secured
   final String state;
   final bool isYou;
+  final String? name; // first name, optional
+  final String? maskedPhone; // 2547••••678
   const GroupMemberView({
     required this.joinOrder,
     required this.turnPosition,
     required this.state,
     required this.isYou,
+    required this.name,
+    required this.maskedPhone,
   });
+
+  /// What to show as the member's label: their name, else "You", else a number.
+  String label() => isYou ? (name ?? 'You') : (name ?? 'Member $joinOrder');
 
   factory GroupMemberView.fromJson(Map<String, dynamic> j) => GroupMemberView(
         joinOrder: (j['joinOrder'] as num).toInt(),
         turnPosition: (j['turnPosition'] as num?)?.toInt(),
         state: j['state'] as String,
         isYou: j['isYou'] as bool? ?? false,
+        name: j['name'] as String?,
+        maskedPhone: j['maskedPhone'] as String?,
       );
 }
 
@@ -148,17 +157,26 @@ class WalletEntry {
 
 class WalletView {
   final String accountId;
-  final String balance;
+  final String available; // spendable + withdrawable
+  final String held; // locked security, returned as the cycle runs
+  final String total;
+  final String withdrawalMin;
   final List<WalletEntry> entries;
   const WalletView({
     required this.accountId,
-    required this.balance,
+    required this.available,
+    required this.held,
+    required this.total,
+    required this.withdrawalMin,
     required this.entries,
   });
 
   factory WalletView.fromJson(Map<String, dynamic> j) => WalletView(
         accountId: j['accountId'] as String,
-        balance: j['balance'].toString(),
+        available: j['available'].toString(),
+        held: j['held'].toString(),
+        total: j['total'].toString(),
+        withdrawalMin: j['withdrawalMin'].toString(),
         entries: ((j['entries'] as List?) ?? const [])
             .map((e) => WalletEntry.fromJson(e as Map<String, dynamic>))
             .toList(),

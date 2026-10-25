@@ -14,10 +14,14 @@ const _typeLabels = <String, String>{
   'payout': 'Payout',
   'fee': 'Fee',
   'withdrawal': 'Withdrawal',
-  'hold': 'Security hold',
-  'hold_release': 'Hold release',
+  'hold': 'Security held',
+  'hold_release': 'Security released',
   'refund': 'Refund',
 };
+
+// Hold moves are the member's own money shifting between Available and Held —
+// neutral, not a gain or a loss.
+const _neutralTypes = {'hold', 'hold_release'};
 
 class WalletScreen extends ConsumerStatefulWidget {
   final String walletId;
@@ -132,6 +136,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   }
 
   Widget _content(WalletView w) {
+    final available = double.tryParse(w.available) ?? 0;
+    final held = double.tryParse(w.held) ?? 0;
+    final min = double.tryParse(w.withdrawalMin) ?? 0;
+    final canWithdraw = available >= min && available > 0;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -142,10 +151,15 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Wallet balance', style: TextStyle(color: Colors.white70)),
+                const Text('Available', style: TextStyle(color: Colors.white70)),
                 const SizedBox(height: 6),
-                Text(formatKes(w.balance),
+                Text(formatKes(w.available),
                     style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800)),
+                if (held > 0) ...[
+                  const SizedBox(height: 12),
+                  Text('Held ${formatKes(w.held)} — returned as your cycle runs',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                ],
               ],
             ),
           ),
@@ -155,7 +169,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
           children: [
             Expanded(child: FilledButton(onPressed: _topup, child: const Text('Top up'))),
             const SizedBox(width: 12),
-            Expanded(child: OutlinedButton(onPressed: _withdraw, child: const Text('Withdraw'))),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: canWithdraw ? _withdraw : null,
+                child: Text(canWithdraw ? 'Withdraw' : 'Min ${formatKes(w.withdrawalMin)}'),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -174,17 +193,21 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 
   Widget _entryTile(WalletEntry e) {
     final value = double.tryParse(e.amount) ?? 0;
-    final positive = value >= 0;
+    final neutral = _neutralTypes.contains(e.type);
+    final color = neutral
+        ? BoblyColors.slate
+        : (value >= 0 ? BoblyColors.success : BoblyColors.danger);
+    // The payout receipt shows the fee breakdown (spec §5: fee on every receipt).
+    final subtitle = e.type == 'payout'
+        ? 'Pot KES 24.00 · fee KES 1.20 (5%) · you received'
+        : e.at;
     return Card(
       child: ListTile(
         title: Text(_typeLabels[e.type] ?? e.type),
-        subtitle: Text(e.at),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: Text(
           formatKes(e.amount),
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: positive ? BoblyColors.success : BoblyColors.danger,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700, color: color),
         ),
       ),
     );

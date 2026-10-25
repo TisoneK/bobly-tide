@@ -25,6 +25,7 @@ class VerificationScreen extends ConsumerStatefulWidget {
 
 class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   late Future<VerificationStatus> _future;
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _code = TextEditingController();
   bool _emailSent = false;
@@ -37,6 +38,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _code.dispose();
     super.dispose();
@@ -83,6 +85,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
           style: const TextStyle(fontSize: 15, color: BoblyColors.slate),
         ),
         const SizedBox(height: 16),
+        _nameCard(),
         _emailCard(status.items['email'] ?? 'unverified'),
         for (final kind in const ['id', 'face', 'address'])
           _docCard(kind, status.items[kind] ?? 'unverified'),
@@ -105,6 +108,33 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
       child: Text(status, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _nameCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Your first name', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Shown to your group members instead of your number.',
+                style: TextStyle(color: BoblyColors.slate, fontSize: 13)),
+            const SizedBox(height: 10),
+            TextField(controller: _name, decoration: const InputDecoration(labelText: 'First name')),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => _run(() async {
+                await ref.read(apiClientProvider).setProfile(_name.text.trim());
+                if (mounted) showInfo(context, 'Saved');
+              }),
+              child: const Text('Save name'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

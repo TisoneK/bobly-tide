@@ -59,15 +59,20 @@ void main() {
     expect(g.yourSecured, false);
   });
 
-  test('WalletView.fromJson parses balance and entries', () {
+  test('WalletView.fromJson parses available/held and entries', () {
     final w = WalletView.fromJson({
       'accountId': 'w1',
-      'balance': '22.8',
+      'available': '22.8',
+      'held': '1',
+      'total': '23.8',
+      'withdrawalMin': '50',
       'entries': [
         {'type': 'payout', 'amount': '22.8', 'groupId': 'g1', 'hourIndex': 0, 'at': '2026-01-01T00:00:00Z'},
       ],
     });
-    expect(w.balance, '22.8');
+    expect(w.available, '22.8');
+    expect(w.held, '1');
+    expect(w.withdrawalMin, '50');
     expect(w.entries.single.type, 'payout');
     expect(w.entries.single.hourIndex, 0);
   });

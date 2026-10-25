@@ -169,9 +169,24 @@ class _JoinCard extends StatelessWidget {
           children: [
             const Text('Join the Daily group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text('We\'ll put you in the next forming group. Your turn comes once it is full.',
+            const Text('You join the next forming group. It starts once it is full; your turn comes at your position.',
                 style: TextStyle(color: BoblyColors.slate)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+            const _CostLine('Top up today', 'KES 24', note: 'locked for the day, used KES 1 an hour'),
+            const _CostLine('You receive at your turn', 'KES 22.80', note: 'your own money back, minus the 5% fee'),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BoblyColors.mist.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Not an investment. You get your own money back, minus a 5% fee on each payout. No returns.',
+                style: TextStyle(color: BoblyColors.slate, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 14),
             FilledButton(
               onPressed: loading ? null : onJoin,
               child: loading
@@ -180,6 +195,35 @@ class _JoinCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CostLine extends StatelessWidget {
+  final String label;
+  final String amount;
+  final String? note;
+  const _CostLine(this.label, this.amount, {this.note});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label),
+                if (note != null) Text(note!, style: const TextStyle(color: BoblyColors.slate, fontSize: 12)),
+              ],
+            ),
+          ),
+          Text(amount, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }

@@ -18,7 +18,10 @@ they live in the product spec and this spec points at them.
 > ADR-8), phone + OTP auth guarding the API (§8, ADR-9), tiered KYC
 > verification gating joins/money (§6, ADR-12), and first-come-first-served
 > turn order (payout position = security-posting order) with a turn
-> countdown (ADR-13) — §14 steps 1–3, covered by a 62-test suite. A Flutter
+> countdown (ADR-13), and the pilot screen-review fixes — flat full-24
+> security hold, Available/Held wallet, member name + masked phone, fee on
+> the receipt (ADR-14, see `screen-review.md`) — §14 steps 1–3, covered by a
+> 62-test suite. A Flutter
 > member client (§14 step 4, ADR-10) lives in
 > [`app/`](app/): sign-up/OTP, package, join/queue, group/turn, wallet +
 > receipts — authored but not yet compiled (no Flutter SDK in the build

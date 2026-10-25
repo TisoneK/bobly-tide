@@ -116,17 +116,20 @@ The platform earns KES 0.05 per member per hour, which is KES 1.20 per member pe
 
 | Active members | Revenue per hour | Per day | Per 30 days |
 |---|---|---|---|
+| 120 (pilot: 5 Daily groups) | KES 6 | KES 144 | KES 4,320 |
 | 1,000 | KES 50 | KES 1,200 | KES 36,000 |
 | 10,000 | KES 500 | KES 12,000 | KES 360,000 |
 | 100,000 | KES 5,000 | KES 120,000 | KES 3.6M |
 
-Revenue depends on active members only. Package mix does not change it.
+Revenue depends on active members only. Package mix does not change it. The
+pilot is about proving the mechanic, not revenue.
 
 ### 5.3 Fee options to test later
 
 - Lower fee on bigger packages to reward longer waits and help them fill
 - A small flat monthly membership alongside the percentage
 - Premium tiers with a higher hourly contribution (KES 2, 5, or 10 an hour) as separate packages
+- A tiny one-time **join fee** (KES 1–5, once per account), refunded if the group never forms or verification fails. Kept out of v1 (§5.1) so the "one bob" promise holds; a KES 20+ fee is explicitly ruled out as it breaks that promise and reads as a scam pattern.
 
 ---
 

@@ -108,6 +108,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         const SizedBox(height: 8),
         ...members.map((m) {
           final secured = m.turnPosition != null;
+          final sub = [
+            if (m.maskedPhone != null) m.maskedPhone!,
+            secured ? 'Secured' : (m.state == 'active' ? 'Not secured yet' : m.state),
+          ].join(' · ');
           return Card(
             color: m.isYou ? BoblyColors.primaryLight.withOpacity(0.08) : null,
             child: ListTile(
@@ -116,10 +120,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                 foregroundColor: m.isYou ? Colors.white : BoblyColors.ink,
                 child: Text(secured ? '${m.turnPosition}' : '·'),
               ),
-              title: Text(m.isYou ? 'You' : 'Member ${m.joinOrder}',
-                  style: TextStyle(fontWeight: m.isYou ? FontWeight.w700 : FontWeight.w500)),
-              subtitle: Text(secured ? 'Secured' : (m.state == 'active' ? 'Not secured yet' : m.state),
-                  style: const TextStyle(color: BoblyColors.slate)),
+              title: Text(m.label(), style: TextStyle(fontWeight: m.isYou ? FontWeight.w700 : FontWeight.w500)),
+              subtitle: Text(sub, style: const TextStyle(color: BoblyColors.slate, fontSize: 12)),
             ),
           );
         }),

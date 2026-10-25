@@ -37,6 +37,8 @@ class ApiClient {
   Future<void> submitKyc(String kind, String reference) =>
       _post('/verification/submit', {'kind': kind, 'reference': reference});
 
+  Future<void> setProfile(String displayName) => _post('/auth/profile', {'displayName': displayName});
+
   // --- groups / wallets (require a token) ---
   /// Join the Daily package; the server allocates a filling group.
   Future<JoinResult> joinDaily() async =>

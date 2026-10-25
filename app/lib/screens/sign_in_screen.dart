@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../phone.dart';
 import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
 import 'otp_screen.dart';
-
-final _phoneRe = RegExp(r'^2547\d{8}$');
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -27,9 +26,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _requestCode() async {
-    final phone = _phone.text.trim();
-    if (!_phoneRe.hasMatch(phone)) {
-      showInfo(context, 'Enter your number as 2547XXXXXXXX');
+    final phone = normalizePhone(_phone.text);
+    if (phone == null) {
+      showInfo(context, 'Enter a valid Safaricom number (07…, 01… or 2547…)');
       return;
     }
     setState(() => _loading = true);
@@ -63,10 +62,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               TextField(
                 controller: _phone,
                 keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(13)],
                 decoration: const InputDecoration(
                   labelText: 'M-Pesa number',
-                  hintText: '2547XXXXXXXX',
+                  hintText: '07XX XXX XXX',
                 ),
               ),
               const SizedBox(height: 16),
@@ -75,6 +74,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 child: _loading
                     ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Text('Send code'),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'By continuing you agree to the Terms and Privacy Policy. Your number is used to secure your account.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: BoblyColors.slate, fontSize: 12),
               ),
               const Spacer(flex: 2),
             ],
