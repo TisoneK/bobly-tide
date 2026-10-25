@@ -17,14 +17,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final _code = TextEditingController();
   bool _loading = false;
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
 
   void _signOut() {
     ref.read(membershipProvider.notifier).clear();
@@ -32,17 +25,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _join() async {
-    final code = _code.text.trim();
-    if (code.isEmpty) {
-      showInfo(context, 'Enter the group invite code');
-      return;
-    }
     setState(() => _loading = true);
     try {
-      final join = await ref.read(apiClientProvider).joinGroup(code);
-      ref.read(membershipProvider.notifier).set(Membership(code, join));
+      final join = await ref.read(apiClientProvider).joinDaily();
+      ref.read(membershipProvider.notifier).set(Membership(join.groupId, join));
       if (!mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupScreen(groupId: code)));
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupScreen(groupId: join.groupId)));
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -66,7 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (membership != null)
             _YourGroupCard(membership: membership)
           else
-            _JoinCard(controller: _code, loading: _loading, onJoin: _join),
+            _JoinCard(loading: _loading, onJoin: _join),
         ],
       ),
     );
@@ -112,10 +100,9 @@ class _PackageCard extends StatelessWidget {
 }
 
 class _JoinCard extends StatelessWidget {
-  final TextEditingController controller;
   final bool loading;
   final VoidCallback onJoin;
-  const _JoinCard({required this.controller, required this.loading, required this.onJoin});
+  const _JoinCard({required this.loading, required this.onJoin});
 
   @override
   Widget build(BuildContext context) {
@@ -125,17 +112,16 @@ class _JoinCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Join a group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text('Join the Daily group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text('Enter the invite code you were given.', style: TextStyle(color: BoblyColors.slate)),
+            const Text('We\'ll put you in the next forming group. Your turn comes once it is full.',
+                style: TextStyle(color: BoblyColors.slate)),
             const SizedBox(height: 16),
-            TextField(controller: controller, decoration: const InputDecoration(labelText: 'Group invite code')),
-            const SizedBox(height: 12),
             FilledButton(
               onPressed: loading ? null : onJoin,
               child: loading
                   ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Join group'),
+                  : const Text('Join'),
             ),
           ],
         ),

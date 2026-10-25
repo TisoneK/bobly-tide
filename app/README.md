@@ -40,10 +40,12 @@ lib/widgets/             formatting + shared UI helpers
 1. **Sign in** — enter M-Pesa number → `POST /auth/otp/request`.
 2. **OTP** — enter the 6-digit code → `POST /auth/otp/verify` → session token
    (held in memory for the pilot).
-3. **Home** — the Daily package, and a field to **join a group by invite
-   code** (the group id an organiser shares — the pilot is invite-only).
+3. **Home** — the Daily package, and a one-tap **Join** (`POST
+   /packages/daily/join`); the server puts you in the next forming group and
+   ties the membership to your account.
 4. **Group** — a queue view while filling (slots remaining), a turn-order
-   view once active, with your position highlighted.
+   view once active, with your own position and balance (other members'
+   balances are not shown).
 5. **Wallet** — balance + receipts, with **Top up** (M-Pesa STK push) and
    **Withdraw** (M-Pesa B2C); both complete once M-Pesa confirms.
 
@@ -51,9 +53,5 @@ lib/widgets/             formatting + shared UI helpers
 
 - The session token is kept in memory only — add secure storage so it
   survives app restarts.
-- Joining is by invite code (group id) because the backend has no
-  "find a filling group for a package" endpoint yet; that, and tying the
-  join to the authenticated user, are the member-journey follow-ups noted
-  for the backend.
 - No push/SMS notifications, no renewal/switch-package UI, no offline cache
   — out of scope for the pilot slice (build spec §2.2).

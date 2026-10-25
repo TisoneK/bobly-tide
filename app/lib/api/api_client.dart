@@ -27,8 +27,9 @@ class ApiClient {
       Session.fromJson(await _post('/auth/otp/verify', {'phone': phone, 'code': code}));
 
   // --- groups / wallets (require a token) ---
-  Future<JoinResult> joinGroup(String groupId) async =>
-      JoinResult.fromJson(await _post('/groups/$groupId/join', const {}));
+  /// Join the Daily package; the server allocates a filling group.
+  Future<JoinResult> joinDaily() async =>
+      JoinResult.fromJson(await _post('/packages/daily/join', const {}));
 
   Future<GroupView> getGroup(String groupId) async => GroupView.fromJson(await _get('/groups/$groupId'));
 

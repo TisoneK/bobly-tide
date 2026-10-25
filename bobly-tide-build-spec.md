@@ -19,8 +19,11 @@ they live in the product spec and this spec points at them.
 > 1–3, all covered by a 55-test suite. A Flutter member client (§14 step 4,
 > ADR-10) lives in [`app/`](app/): sign-up/OTP, package, join/queue,
 > group/turn, wallet + receipts — authored but not yet compiled (no Flutter
-> SDK in the build env). Next: harden for the pilot (wire gates, close the
-> auth/ownership + Daraja follow-ups) and verify the app on a device.
+> SDK in the build env). Member-journey hardening done (ADR-11): a
+> package→group join tied to the authenticated user and per-resource
+> ownership on wallet/group routes. Next (§14 step 5): wire gates, an
+> admin/ops role, Daraja sandbox verification + callback source validation,
+> and verify the app on a device.
 
 ---
 

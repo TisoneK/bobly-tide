@@ -29,7 +29,7 @@ async function setup(daraja: DarajaClient = new FakeDarajaClient()) {
   const groups = new GroupStore(pool);
   await groups.ensureDailyPackage(DAILY_PACKAGE);
   const group = await groups.createGroup();
-  const member = await groups.joinGroup(group.id, DAILY_PACKAGE);
+  const member = await groups.joinGroupAsNewUser(group.id, DAILY_PACKAGE);
 
   const ledger = new PgLedgerRepo(pool);
   const store = new MpesaStore(pool);

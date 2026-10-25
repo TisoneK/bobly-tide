@@ -7,6 +7,13 @@ import type { Group, Membership, Package } from '../domain/types';
 // rows to a package row in the schema.
 export const DAILY_PACKAGE_DB_ID = '00000000-0000-0000-0000-0000000000da';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Guard before comparing a value against a `uuid` column — Postgres errors
+ *  on malformed uuid syntax, so a bad path param must be treated as absent. */
+function isUuid(v: string): boolean {
+  return UUID_RE.test(v);
+}
+
 export interface LoadedGroup {
   group: Group;
   memberships: Membership[];
@@ -40,6 +47,12 @@ export class GroupNotJoinableError extends Error {
     this.name = 'GroupNotJoinableError';
   }
 }
+export class AlreadyJoinedError extends Error {
+  constructor(groupId: string) {
+    super(`already a member of group ${groupId}`);
+    this.name = 'AlreadyJoinedError';
+  }
+}
 
 /**
  * Postgres persistence for groups, members and their wallets. The money
@@ -70,9 +83,12 @@ export class GroupStore {
     return { id, packageId: DAILY_PACKAGE_DB_ID, state: 'filling' };
   }
 
-  /** Add a member to a filling group: creates the user, their wallet and the
-   *  membership at the next turn position. */
-  async joinGroup(groupId: string, pkg: Package, phone?: string): Promise<Membership> {
+  /**
+   * Add an existing (authenticated) user to a filling group, creating their
+   * wallet and membership at the next turn position. The caller's identity —
+   * not a throwaway user — owns the membership.
+   */
+  async createMembershipForUser(groupId: string, userId: string, pkg: Package): Promise<Membership> {
     const loaded = await this.getGroup(groupId);
     if (loaded.group.state !== 'filling') {
       throw new GroupNotJoinableError(`group ${groupId} is ${loaded.group.state}, not filling`);
@@ -80,22 +96,17 @@ export class GroupStore {
     if (loaded.memberships.length >= pkg.size) {
       throw new GroupNotJoinableError(`group ${groupId} is full`);
     }
+    if (loaded.memberships.some((m) => m.userId === userId)) {
+      throw new AlreadyJoinedError(groupId);
+    }
 
-    const userId = randomUUID();
     const walletId = randomUUID();
     const membershipId = randomUUID();
     const joinOrder = loaded.memberships.length + 1;
     const now = new Date().toISOString();
-    const userPhone = phone ?? `+2547${randomUUID().replace(/\D/g, '').slice(0, 8).padEnd(8, '0')}`;
 
     await this.pool.query(
-      `INSERT INTO app_user (id, phone, kyc_level, status, created_at)
-       VALUES ($1, $2, 'phone', 'active', $3)`,
-      [userId, userPhone, now],
-    );
-    await this.pool.query(
-      `INSERT INTO wallet (id, user_id, kind, currency, created_at)
-       VALUES ($1, $2, 'member', 'KES', $3)`,
+      `INSERT INTO wallet (id, user_id, kind, currency, created_at) VALUES ($1, $2, 'member', 'KES', $3)`,
       [walletId, userId, now],
     );
     await this.pool.query(
@@ -107,7 +118,67 @@ export class GroupStore {
     return { id: membershipId, groupId, userId, walletId, joinOrder, state: 'active' };
   }
 
+  /** The earliest filling group with room that the user has not already
+   *  joined, or null if there is none. */
+  async findJoinableGroupForUser(pkg: Package, userId: string): Promise<string | null> {
+    const filling = await this.pool.query<{ id: string }>(
+      "SELECT id FROM \"group\" WHERE state = 'filling' ORDER BY created_at",
+    );
+    for (const row of filling.rows) {
+      const count = await this.pool.query<{ c: number | string }>(
+        'SELECT count(*) AS c FROM membership WHERE group_id = $1',
+        [row.id],
+      );
+      if (Number(count.rows[0]?.c ?? 0) >= pkg.size) continue;
+      const mine = await this.pool.query('SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2', [
+        row.id,
+        userId,
+      ]);
+      if (mine.rowCount && mine.rowCount > 0) continue;
+      return row.id;
+    }
+    return null;
+  }
+
+  /** Join the user to a filling group for the package, allocating or creating
+   *  one as needed (product spec §3.4 — many groups of a package in parallel). */
+  async joinPackage(userId: string, pkg: Package): Promise<Membership> {
+    let groupId = await this.findJoinableGroupForUser(pkg, userId);
+    groupId ??= (await this.createGroup()).id;
+    return this.createMembershipForUser(groupId, userId, pkg);
+  }
+
+  /** Test/seed helper: mint a fresh user and join them to a group. Not used
+   *  by the API, which ties joins to the authenticated user. */
+  async joinGroupAsNewUser(groupId: string, pkg: Package): Promise<Membership> {
+    const userId = randomUUID();
+    await this.pool.query(
+      `INSERT INTO app_user (id, phone, kyc_level, status, created_at) VALUES ($1, $2, 'phone', 'active', $3)`,
+      [userId, `test-user-${userId}`, new Date().toISOString()],
+    );
+    return this.createMembershipForUser(groupId, userId, pkg);
+  }
+
+  async walletOwner(walletId: string): Promise<string | null> {
+    if (!isUuid(walletId)) return null;
+    const res = await this.pool.query<{ user_id: string | null }>(
+      'SELECT user_id FROM wallet WHERE id = $1',
+      [walletId],
+    );
+    return res.rows[0]?.user_id ?? null;
+  }
+
+  async isMember(groupId: string, userId: string): Promise<boolean> {
+    if (!isUuid(groupId)) return false;
+    const res = await this.pool.query('SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2', [
+      groupId,
+      userId,
+    ]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async getGroup(groupId: string): Promise<LoadedGroup> {
+    if (!isUuid(groupId)) throw new GroupNotFoundError(groupId);
     const g = await this.pool.query<GroupRow>('SELECT * FROM "group" WHERE id = $1', [groupId]);
     const row = g.rows[0];
     if (!row) throw new GroupNotFoundError(groupId);

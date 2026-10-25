@@ -110,24 +110,28 @@ DATABASE_URL=postgres://user:pass@host:5432/bobly npm start   # API on :3000
 ## HTTP API + scheduler (NestJS)
 
 Token-based DI only (this toolchain emits no decorator metadata). All
-group/wallet routes and the M-Pesa top-up/withdraw require a
+group/package/wallet routes and the M-Pesa top-up/withdraw require a
 `Authorization: Bearer <token>` session; the `/auth/*` routes and the Daraja
-callbacks are public.
+callbacks are public. Beyond authentication, routes **authorize per
+resource**: a wallet route requires you to own the wallet (403 otherwise),
+and group start/settle-due/view require you to be a member of the group
+(ADR-11).
 
 | Method + path | Does |
 |---|---|
 | `POST /auth/otp/request` | Send a one-time code by SMS (public) |
 | `POST /auth/otp/verify` | Verify the code, return a session token (public) |
-| `POST /groups` | Create a Daily group (`filling`) |
-| `POST /groups/:id/join` | Add a member (creates user + wallet); returns `walletId` |
-| `POST /wallets/:id/topup` | Start an M-Pesa STK push (needs `amount`, `phone`); credited on callback |
-| `POST /wallets/:id/withdraw` | Start an M-Pesa B2C payout (reserves the funds) |
+| `POST /packages/daily/join` | Join the Daily package; server allocates a filling group, ties membership to you |
+| `POST /groups` | Create an empty Daily group (operational) |
+| `POST /groups/:id/join` | Join this specific group as the authenticated user |
+| `POST /wallets/:id/topup` | Start an M-Pesa STK push on your wallet (needs `amount`, `phone`) |
+| `POST /wallets/:id/withdraw` | Start an M-Pesa B2C payout from your wallet (reserves the funds) |
 | `POST /mpesa/callbacks/stk` | Daraja STK callback → credits the wallet on success |
 | `POST /mpesa/callbacks/b2c` | Daraja B2C result → finalises or refunds the withdrawal |
-| `POST /groups/:id/start` | Fund every member's hold, activate, stamp `start_at` |
-| `POST /groups/:id/settle-due` | Settle any hours due now (same path the scheduler uses) |
-| `GET /groups/:id` | State, start time, members + balances, platform fee total |
-| `GET /wallets/:id` | Balance + entry history |
+| `POST /groups/:id/start` | Fund every member's hold, activate, stamp `start_at` (member-only) |
+| `POST /groups/:id/settle-due` | Settle any hours due now (member-only; same path the scheduler uses) |
+| `GET /groups/:id` | Your position + balance and the turn order (other members' balances are not exposed; member-only) |
+| `GET /wallets/:id` | Balance + entry history (owner-only) |
 
 The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
 on an interval: for each active group it settles every hour that has come
@@ -164,20 +168,20 @@ callback** (ADR-8):
   expire quickly, are single-use, and lock after too many wrong attempts.
 - A verified phone maps to an `app_user`; the token is a minimal HS256 JWT
   (`src/auth/jwt.ts`, no external dependency) signed with `AUTH_JWT_SECRET`.
-- `AuthGuard` (`src/api/auth.guard.ts`) enforces a valid Bearer token on the
-  protected routes. The `SmsSender` is an interface — `FakeSmsSender` for
-  tests/dev, a real provider (Africa's Talking, §13-D6) wired later.
+- `AuthGuard` (`src/api/auth.guard.ts`) enforces a valid Bearer token;
+  `@CurrentUser()` exposes the claims, and routes **authorize per resource**
+  on top of it (`requireWalletOwner`, `GroupStore.isMember` — ADR-11). The
+  `SmsSender` is an interface — `FakeSmsSender` for tests/dev, a real provider
+  (Africa's Talking, §13-D6) wired later.
 - Secrets come from env (`.env.example`); none in code. If `AUTH_JWT_SECRET`
   is unset the server generates an ephemeral one (dev only) and warns.
 
-> Follow-up: the guard authenticates (valid session) but does not yet
-> authorize per-resource ownership — e.g. that the caller owns the wallet
-> they top up or the membership they act on. That, and tying a join to the
-> authenticated user, come with the member-journey work.
-
 ## Not built yet (next steps, build spec §14)
 
-- The Flutter client; per-resource ownership checks (see the note above).
+- An admin/ops role (so create/start/settle aren't member-gated) and
+  per-user group-join limits (product spec §8.5).
+- The Flutter client runs against this API but is unverified (no SDK here);
+  secure-storage for its token.
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against
   the sandbox, not by the unit suite (which uses the fake); the callback
   endpoints need Daraja source validation before production.

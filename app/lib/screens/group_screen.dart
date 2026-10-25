@@ -53,7 +53,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   Widget _content(GroupView group) {
     final membership = ref.watch(membershipProvider);
-    final myOrder = (membership != null && membership.groupId == group.id) ? membership.join.joinOrder : null;
+    final mine = (membership != null && membership.groupId == group.id) ? membership : null;
     final members = [...group.members]..sort((a, b) => a.joinOrder.compareTo(b.joinOrder));
 
     return ListView(
@@ -61,10 +61,20 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       children: [
         _StateBanner(group: group),
         const SizedBox(height: 16),
+        Card(
+          color: BoblyColors.primaryLight.withOpacity(0.08),
+          child: ListTile(
+            title: const Text('Your turn & balance', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('Position #${group.yourPosition}'),
+            trailing: Text(formatKes(group.yourBalance),
+                style: const TextStyle(fontWeight: FontWeight.w800, color: BoblyColors.primary)),
+          ),
+        ),
+        const SizedBox(height: 16),
         const Text('Turn order', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         ...members.map((m) {
-          final isYou = m.joinOrder == myOrder;
+          final isYou = m.isYou;
           return Card(
             color: isYou ? BoblyColors.primaryLight.withOpacity(0.08) : null,
             child: ListTile(
@@ -76,15 +86,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
               title: Text(isYou ? 'You' : 'Member ${m.joinOrder}',
                   style: TextStyle(fontWeight: isYou ? FontWeight.w700 : FontWeight.w500)),
               subtitle: m.state == 'active' ? null : Text(m.state),
-              trailing: isYou ? Text(formatKes(m.balance), style: const TextStyle(fontWeight: FontWeight.w700)) : null,
             ),
           );
         }),
-        if (myOrder != null) ...[
+        if (mine != null) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => WalletScreen(walletId: membership!.join.walletId)),
+              MaterialPageRoute(builder: (_) => WalletScreen(walletId: mine.join.walletId)),
             ),
             icon: const Icon(Icons.account_balance_wallet_outlined),
             label: const Text('My wallet'),

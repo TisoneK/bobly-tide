@@ -11,16 +11,19 @@ class Session {
 
 /// The membership created when a member joins a group.
 class JoinResult {
+  final String groupId;
   final String membershipId;
   final String walletId;
   final int joinOrder;
   const JoinResult({
+    required this.groupId,
     required this.membershipId,
     required this.walletId,
     required this.joinOrder,
   });
 
   factory JoinResult.fromJson(Map<String, dynamic> j) => JoinResult(
+        groupId: j['groupId'] as String,
         membershipId: j['membershipId'] as String,
         walletId: j['walletId'] as String,
         joinOrder: (j['joinOrder'] as num).toInt(),
@@ -37,26 +40,18 @@ abstract final class DailyPackage {
   static const String dailyCost = '24'; // KES per member per day
 }
 
-class GroupMember {
-  final String membershipId;
-  final String walletId;
+/// A member as shown in the group view — position and state only; other
+/// members' balances are not exposed by the backend.
+class GroupMemberView {
   final int joinOrder;
   final String state;
-  final String balance;
-  const GroupMember({
-    required this.membershipId,
-    required this.walletId,
-    required this.joinOrder,
-    required this.state,
-    required this.balance,
-  });
+  final bool isYou;
+  const GroupMemberView({required this.joinOrder, required this.state, required this.isYou});
 
-  factory GroupMember.fromJson(Map<String, dynamic> j) => GroupMember(
-        membershipId: j['membershipId'] as String,
-        walletId: j['walletId'] as String,
+  factory GroupMemberView.fromJson(Map<String, dynamic> j) => GroupMemberView(
         joinOrder: (j['joinOrder'] as num).toInt(),
         state: j['state'] as String,
-        balance: j['balance'].toString(),
+        isYou: j['isYou'] as bool? ?? false,
       );
 }
 
@@ -65,14 +60,16 @@ class GroupView {
   final String state; // filling | active | completed | dissolved
   final String? startAt;
   final int size;
-  final String platform;
-  final List<GroupMember> members;
+  final int yourPosition;
+  final String yourBalance;
+  final List<GroupMemberView> members;
   const GroupView({
     required this.id,
     required this.state,
     required this.startAt,
     required this.size,
-    required this.platform,
+    required this.yourPosition,
+    required this.yourBalance,
     required this.members,
   });
 
@@ -86,9 +83,10 @@ class GroupView {
         state: j['state'] as String,
         startAt: j['startAt'] as String?,
         size: (j['size'] as num).toInt(),
-        platform: j['platform'].toString(),
+        yourPosition: (j['yourPosition'] as num).toInt(),
+        yourBalance: j['yourBalance'].toString(),
         members: ((j['members'] as List?) ?? const [])
-            .map((m) => GroupMember.fromJson(m as Map<String, dynamic>))
+            .map((m) => GroupMemberView.fromJson(m as Map<String, dynamic>))
             .toList(),
       );
 }

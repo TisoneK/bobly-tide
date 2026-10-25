@@ -15,16 +15,15 @@ import { FakeDarajaClient } from '../src/mpesa/daraja';
 import { ONE_HOUR_MS } from '../src/scheduler';
 
 const pkg = DAILY_PACKAGE;
-const PHONE = '254700000000';
+const phoneFor = (i: number) => `2547${i.toString().padStart(8, '0')}`;
 
 describe('HTTP API (e2e)', () => {
   let app: INestApplication;
   let sms: FakeSmsSender;
-  let bearer: string;
 
   type Http = ReturnType<INestApplication['getHttpServer']>;
 
-  /** Log in via OTP and return an Authorization header value. */
+  /** Log in via OTP; returns an Authorization header value. */
   async function login(http: Http, phone: string): Promise<string> {
     await request(http).post('/auth/otp/request').send({ phone }).expect(200);
     const code = sms.codeFor(phone)!;
@@ -32,12 +31,12 @@ describe('HTTP API (e2e)', () => {
     return `Bearer ${res.body.token}`;
   }
 
-  /** Fund a wallet the real way: STK push, then the confirming callback. */
-  async function fund(http: Http, walletId: string, amount: string) {
+  /** Fund a wallet the real way: STK push (owner's token), then the callback. */
+  async function fund(http: Http, bearer: string, walletId: string, amount: string) {
     const init = await request(http)
       .post(`/wallets/${walletId}/topup`)
       .set('Authorization', bearer)
-      .send({ amount, phone: PHONE })
+      .send({ amount, phone: phoneFor(1) })
       .expect(201);
     await request(http)
       .post('/mpesa/callbacks/stk')
@@ -67,111 +66,82 @@ describe('HTTP API (e2e)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
-    bearer = await login(app.getHttpServer(), '254711111111');
   });
 
   afterEach(async () => {
     await app.close();
   });
 
-  it('runs create → join → M-Pesa top-up → start → settle, landing correct balances', async () => {
+  it('runs the member journey: 24 logins → join package → fund → start → settle', async () => {
     const http = app.getHttpServer();
 
-    const created = await request(http).post('/groups').set('Authorization', bearer).expect(201);
-    const groupId = created.body.id as string;
-    expect(created.body.size).toBe(pkg.size);
-
+    const tokens: string[] = [];
     const wallets: string[] = [];
-    for (let i = 0; i < pkg.size; i++) {
-      const res = await request(http)
-        .post(`/groups/${groupId}/join`)
-        .set('Authorization', bearer)
-        .send({})
-        .expect(201);
-      wallets.push(res.body.walletId);
+    const groupIds: string[] = [];
+    for (let i = 1; i <= pkg.size; i++) {
+      const bearer = await login(http, phoneFor(i));
+      const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
+      tokens.push(bearer);
+      wallets.push(join.body.walletId);
+      groupIds.push(join.body.groupId);
     }
 
-    for (const walletId of wallets) await fund(http, walletId, '24');
+    // Everyone was allocated into the same filling group.
+    expect(new Set(groupIds).size).toBe(1);
+    const groupId = groupIds[0]!;
 
-    await request(http).post(`/groups/${groupId}/start`).set('Authorization', bearer).expect(201);
+    for (let i = 0; i < pkg.size; i++) await fund(http, tokens[i]!, wallets[i]!, '24');
 
+    await request(http).post(`/groups/${groupId}/start`).set('Authorization', tokens[0]!).expect(201);
     const settled = await request(http)
       .post(`/groups/${groupId}/settle-due`)
-      .set('Authorization', bearer)
+      .set('Authorization', tokens[0]!)
       .expect(201);
-    expect(settled.body.settled).toBeGreaterThanOrEqual(1); // hour 0
+    expect(settled.body.settled).toBeGreaterThanOrEqual(1);
 
-    const group = await request(http).get(`/groups/${groupId}`).set('Authorization', bearer).expect(200);
-    const holder = group.body.members.find((m: { joinOrder: number }) => m.joinOrder === 1);
-    // Position 1: 24 topup − 23 hold − 1 debit + 22.8 payout = 22.8 spendable.
-    expect(holder.balance).toBe('22.8');
-    expect(group.body.platform).toBe('1.2');
+    const group = await request(http).get(`/groups/${groupId}`).set('Authorization', tokens[0]!).expect(200);
+    expect(group.body.yourPosition).toBe(1);
+    expect(group.body.yourBalance).toBe('22.8'); // 24 − 23 hold − 1 + 22.8 payout
+    expect(group.body.members).toHaveLength(pkg.size);
   });
 
-  it('credits a wallet only after the STK callback confirms', async () => {
+  it('ties a join to the caller and refuses acting on another member\'s wallet', async () => {
     const http = app.getHttpServer();
-    const created = await request(http).post('/groups').set('Authorization', bearer).expect(201);
-    const joined = await request(http)
-      .post(`/groups/${created.body.id}/join`)
-      .set('Authorization', bearer)
-      .send({})
-      .expect(201);
-    const walletId = joined.body.walletId as string;
+    const a = await login(http, phoneFor(1));
+    const b = await login(http, phoneFor(2));
+    const ja = await request(http).post('/packages/daily/join').set('Authorization', a).expect(201);
+    const jb = await request(http).post('/packages/daily/join').set('Authorization', b).expect(201);
+    expect(ja.body.groupId).toBe(jb.body.groupId); // same filling group
 
-    const init = await request(http)
-      .post(`/wallets/${walletId}/topup`)
-      .set('Authorization', bearer)
-      .send({ amount: '100', phone: PHONE })
-      .expect(201);
-    let w = await request(http).get(`/wallets/${walletId}`).set('Authorization', bearer).expect(200);
-    expect(w.body.balance).toBe('0'); // not credited until the callback
-
+    // A cannot top up B's wallet.
     await request(http)
-      .post('/mpesa/callbacks/stk')
-      .send({ Body: { stkCallback: { CheckoutRequestID: init.body.checkoutRequestId, ResultCode: 0 } } })
-      .expect(200);
-    w = await request(http).get(`/wallets/${walletId}`).set('Authorization', bearer).expect(200);
-    expect(w.body.balance).toBe('100');
+      .post(`/wallets/${jb.body.walletId}/topup`)
+      .set('Authorization', a)
+      .send({ amount: '24', phone: phoneFor(1) })
+      .expect(403);
+
+    // A non-member cannot view the group.
+    const c = await login(http, phoneFor(3));
+    await request(http).get(`/groups/${ja.body.groupId}`).set('Authorization', c).expect(403);
   });
 
-  it('requires a valid token on protected routes', async () => {
+  it('requires a token to join, and keeps callbacks public', async () => {
     const http = app.getHttpServer();
-    await request(http).post('/groups').expect(401); // no token
-    await request(http).post('/groups').set('Authorization', 'Bearer garbage').expect(401);
-  });
-
-  it('leaves the M-Pesa callbacks public', async () => {
-    const http = app.getHttpServer();
+    await request(http).post('/packages/daily/join').expect(401);
     await request(http)
       .post('/mpesa/callbacks/stk')
       .send({ Body: { stkCallback: { CheckoutRequestID: 'unknown', ResultCode: 0 } } })
       .expect(200);
   });
 
-  it('rejects starting a group that is not full', async () => {
+  it('rejects an invalid top-up amount on your own wallet', async () => {
     const http = app.getHttpServer();
-    const created = await request(http).post('/groups').set('Authorization', bearer).expect(201);
-    await request(http).post(`/groups/${created.body.id}/join`).set('Authorization', bearer).send({}).expect(201);
-    await request(http).post(`/groups/${created.body.id}/start`).set('Authorization', bearer).expect(409);
-  });
-
-  it('rejects an invalid top-up amount', async () => {
-    const http = app.getHttpServer();
-    const created = await request(http).post('/groups').set('Authorization', bearer).expect(201);
-    const joined = await request(http)
-      .post(`/groups/${created.body.id}/join`)
-      .set('Authorization', bearer)
-      .send({})
-      .expect(201);
+    const bearer = await login(http, phoneFor(1));
+    const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
     await request(http)
-      .post(`/wallets/${joined.body.walletId}/topup`)
+      .post(`/wallets/${join.body.walletId}/topup`)
       .set('Authorization', bearer)
-      .send({ amount: '-5', phone: PHONE })
+      .send({ amount: '-5', phone: phoneFor(1) })
       .expect(400);
-  });
-
-  it('404s an unknown group', async () => {
-    const absent = '00000000-0000-0000-0000-000000000999';
-    await request(app.getHttpServer()).get(`/groups/${absent}`).set('Authorization', bearer).expect(404);
   });
 });

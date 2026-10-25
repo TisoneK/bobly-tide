@@ -30,7 +30,7 @@ async function setup() {
 /** Create a full group, fund wallets + holds, and activate it at `startAt`. */
 async function startedGroup(repo: PgLedgerRepo, store: GroupStore, startAt: Date) {
   const group = await store.createGroup();
-  for (let i = 0; i < pkg.size; i++) await store.joinGroup(group.id, pkg);
+  for (let i = 0; i < pkg.size; i++) await store.joinGroupAsNewUser(group.id, pkg);
   const loaded = await store.getGroup(group.id);
   const walletIds = loaded.memberships.map((m) => m.walletId);
 

@@ -13,6 +13,7 @@ import { AuthGuard } from './auth.guard';
 import { GroupStore } from './group.store';
 import { GroupsController } from './groups.controller';
 import { MpesaController } from './mpesa.controller';
+import { PackagesController } from './packages.controller';
 import { SchedulerService } from './scheduler.service';
 import {
   AUTH_CONFIG,
@@ -47,7 +48,7 @@ export class AppModule {
   static forRoot(opts: AppModuleOptions): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, GroupsController, WalletsController, MpesaController],
+      controllers: [AuthController, GroupsController, PackagesController, WalletsController, MpesaController],
       providers: [
         { provide: POOL, useValue: opts.pool },
         { provide: PACKAGE, useValue: opts.pkg },
