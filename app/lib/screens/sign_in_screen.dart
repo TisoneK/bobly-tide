@@ -17,6 +17,7 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _phone = TextEditingController();
+  String _countryDigits = kCountries.first.digits;
   bool _loading = false;
 
   @override
@@ -26,9 +27,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _requestCode() async {
-    final phone = normalizePhone(_phone.text);
+    final phone = resolvePhone(_countryDigits, _phone.text);
     if (phone == null) {
-      showInfo(context, 'Enter a valid Safaricom number (07…, 01… or 2547…)');
+      showInfo(context, 'Enter a valid Safaricom number (07…, 01…)');
       return;
     }
     setState(() => _loading = true);
@@ -59,14 +60,40 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               const Text('One bob. Every hour. Your turn.',
                   style: TextStyle(fontSize: 16, color: BoblyColors.slate)),
               const SizedBox(height: 40),
-              TextField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(13)],
-                decoration: const InputDecoration(
-                  labelText: 'M-Pesa number',
-                  hintText: '07XX XXX XXX',
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: BoblyColors.surface,
+                      border: Border.all(color: BoblyColors.mist),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _countryDigits,
+                        onChanged: (v) => setState(() => _countryDigits = v ?? _countryDigits),
+                        items: [
+                          for (final c in kCountries)
+                            DropdownMenuItem(value: c.digits, child: Text(c.dial)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
+                      decoration: const InputDecoration(
+                        labelText: 'M-Pesa number',
+                        hintText: '07XX XXX XXX',
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               FilledButton(

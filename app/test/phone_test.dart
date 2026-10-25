@@ -26,4 +26,12 @@ void main() {
     expect(normalizePhone('254812345678'), isNull); // 2548 invalid
     expect(normalizePhone('abcd'), isNull);
   });
+
+  test('resolvePhone combines the +254 picker with a local number', () {
+    expect(resolvePhone('254', '0712345678'), '254712345678');
+    expect(resolvePhone('254', '712345678'), '254712345678');
+    expect(resolvePhone('254', '0112345678'), '254112345678');
+    expect(resolvePhone('254', '+254712345678'), '254712345678'); // full pasted in
+    expect(resolvePhone('254', ''), isNull);
+  });
 }

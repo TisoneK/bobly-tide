@@ -18,3 +18,24 @@ String? normalizePhone(String input) {
   }
   return _canonicalRe.hasMatch(d) ? d : null;
 }
+
+/// A supported dialing country for the sign-in picker. Kenya-only for now.
+class Country {
+  final String name;
+  final String dial; // "+254"
+  final String digits; // "254"
+  const Country(this.name, this.dial, this.digits);
+}
+
+const kCountries = <Country>[Country('Kenya', '+254', '254')];
+
+/// Resolve a split picker (country code + local number box) to canonical
+/// form. Accepts a local national number (07.., 01.., 7..) under the chosen
+/// code, and still works if someone pastes a full number into the box.
+String? resolvePhone(String countryDigits, String local) {
+  final direct = normalizePhone(local); // full / intl pasted into the box
+  if (direct != null) return direct;
+  var l = local.replaceAll(RegExp(r'[^0-9]'), '');
+  if (l.startsWith('0')) l = l.substring(1); // drop national trunk '0'
+  return normalizePhone('$countryDigits$l');
+}
