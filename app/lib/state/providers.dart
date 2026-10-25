@@ -16,6 +16,18 @@ class SessionNotifier extends Notifier<Session?> {
 
 final sessionProvider = NotifierProvider<SessionNotifier, Session?>(SessionNotifier.new);
 
+/// The phone the member signed in with (for prefilling M-Pesa top-up /
+/// withdrawal). Set at OTP verify; not part of the token.
+class SignedInPhoneNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String phone) => state = phone;
+  void clear() => state = null;
+}
+
+final signedInPhoneProvider =
+    NotifierProvider<SignedInPhoneNotifier, String?>(SignedInPhoneNotifier.new);
+
 /// Rebuilt whenever the token changes so requests carry the current session.
 final apiClientProvider = Provider<ApiClient>((ref) {
   final session = ref.watch(sessionProvider);

@@ -7,6 +7,8 @@ import '../theme.dart';
 import '../widgets/format.dart';
 import '../widgets/ui.dart';
 import 'group_screen.dart';
+import 'help_screen.dart';
+import 'how_it_works_screen.dart';
 import 'verification_screen.dart';
 import 'wallet_screen.dart';
 
@@ -33,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _signOut() {
     ref.read(membershipProvider.notifier).clear();
+    ref.read(signedInPhoneProvider.notifier).clear();
     ref.read(sessionProvider.notifier).clear();
   }
 
@@ -61,7 +64,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bobly Tide'),
-        actions: [IconButton(onPressed: _signOut, icon: const Icon(Icons.logout))],
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'how') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HowItWorksScreen()));
+              } else if (v == 'help') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
+              } else if (v == 'signout') {
+                _signOut();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'how', child: Text('How it works')),
+              PopupMenuItem(value: 'help', child: Text('Help & disputes')),
+              PopupMenuItem(value: 'signout', child: Text('Sign out')),
+            ],
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

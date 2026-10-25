@@ -48,15 +48,21 @@ Tracks the member-app review against the spec. The app lives in
 
 ## Still missing for the pilot (todo)
 
-- [ ] Top-up M-Pesa prompt + confirmation screen
-- [ ] Withdraw flow + confirmation
-- [ ] Transaction detail / full receipt screen
-- [ ] Low-balance & empty-wallet warning, with the 6-hour grace period
-- [ ] "How it works" page (fee + early-turn rule in plain words)
-- [ ] Cycle-end screen: renew / switch package / leave
-- [ ] Help & dispute entry point
+- [x] Top-up M-Pesa prompt + confirmation screen (`topup_screen.dart`)
+- [x] Withdraw flow + confirmation (`withdraw_screen.dart`)
+- [x] Transaction detail / full receipt screen (`transaction_detail_screen.dart`)
+- [x] Low-balance & empty-wallet warning, with the 6-hour grace period
+  (banner on the wallet screen)
+- [x] "How it works" page (`how_it_works_screen.dart`)
+- [x] Cycle-end: renew / switch package / leave (on the group screen)
+- [x] Help & dispute entry point (`help_screen.dart`)
 - [ ] Estimated start time on the queue (needs fill-rate data)
 - [ ] ID-document capture/upload (currently a reference string stand-in)
+
+> Built but, like the rest of the app, not compiled here (no Flutter SDK).
+> Renew / switch-package are placeholders (no backend endpoints yet); the
+> low-balance threshold is heuristic (Held > 0 and Available < 1) until the
+> backend exposes grace state.
 
 ## Smaller gaps
 

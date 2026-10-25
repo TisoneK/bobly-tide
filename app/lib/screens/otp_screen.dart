@@ -32,6 +32,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     setState(() => _loading = true);
     try {
       final session = await ref.read(apiClientProvider).verifyOtp(widget.phone, code);
+      ref.read(signedInPhoneProvider.notifier).set(widget.phone);
       ref.read(sessionProvider.notifier).set(session);
       if (!mounted) return;
       // Back to the root; AuthGate now shows the home screen.

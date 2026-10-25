@@ -100,6 +100,7 @@ class GroupView {
   int get slotsRemaining => size - joined;
   bool get isFilling => state == 'filling';
   bool get isActive => state == 'active';
+  bool get isCompleted => state == 'completed';
 
   factory GroupView.fromJson(Map<String, dynamic> j) => GroupView(
         id: j['id'] as String,

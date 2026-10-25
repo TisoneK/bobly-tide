@@ -88,6 +88,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       children: [
         _StateBanner(group: group),
         const SizedBox(height: 16),
+        if (group.isCompleted) _cycleEndCard(),
         _turnCard(group),
         if (group.isFilling && !group.yourSecured) ...[
           const SizedBox(height: 12),
@@ -137,6 +138,55 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         ],
       ],
     );
+  }
+
+  Widget _cycleEndCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Cycle complete 🎉', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Everyone got their turn. What next?', style: TextStyle(color: BoblyColors.slate)),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () => showInfo(context, 'Renewing the same group opens at cycle end — coming to the pilot soon.'),
+              child: const Text('Renew this group'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => showInfo(context, 'Daily is the only package in the pilot; more packages come later.'),
+              child: const Text('Switch package'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _confirmLeave,
+              child: const Text('Leave', style: TextStyle(color: BoblyColors.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmLeave() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Leave this group?'),
+        content: const Text('Your cycle is complete and any remaining balance is in your wallet to withdraw.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Stay')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Leave')),
+        ],
+      ),
+    );
+    if (leave == true && mounted) {
+      ref.read(membershipProvider.notifier).clear();
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    }
   }
 
   Widget _turnCard(GroupView group) {

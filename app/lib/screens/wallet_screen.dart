@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models.dart';
@@ -7,21 +6,9 @@ import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/format.dart';
 import '../widgets/ui.dart';
-
-const _typeLabels = <String, String>{
-  'topup': 'Top-up',
-  'hourly_debit': 'Hourly contribution',
-  'payout': 'Payout',
-  'fee': 'Fee',
-  'withdrawal': 'Withdrawal',
-  'hold': 'Security held',
-  'hold_release': 'Security released',
-  'refund': 'Refund',
-};
-
-// Hold moves are the member's own money shifting between Available and Held —
-// neutral, not a gain or a loss.
-const _neutralTypes = {'hold', 'hold_release'};
+import 'topup_screen.dart';
+import 'transaction_detail_screen.dart';
+import 'withdraw_screen.dart';
 
 class WalletScreen extends ConsumerStatefulWidget {
   final String walletId;
@@ -44,75 +31,20 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     setState(() => _future = ref.read(apiClientProvider).getWallet(widget.walletId));
   }
 
-  Future<void> _topup() async {
-    final req = await _amountSheet('Top up', 'You\'ll get an M-Pesa prompt to confirm.');
-    if (req == null) return;
-    try {
-      await ref.read(apiClientProvider).topup(widget.walletId, req.amount, req.phone);
-      if (mounted) showInfo(context, 'Enter your M-Pesa PIN on your phone to confirm.');
-    } catch (e) {
-      if (mounted) showError(context, e);
-    }
+  Future<void> _openTopUp() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => TopUpScreen(walletId: widget.walletId)),
+    );
+    if (changed == true) _refresh();
   }
 
-  Future<void> _withdraw() async {
-    final req = await _amountSheet('Withdraw', 'Sent to your M-Pesa number.');
-    if (req == null) return;
-    try {
-      await ref.read(apiClientProvider).withdraw(widget.walletId, req.amount, req.phone);
-      if (mounted) showInfo(context, 'Withdrawal sent — it reflects once M-Pesa confirms.');
-    } catch (e) {
-      if (mounted) showError(context, e);
-    }
-  }
-
-  Future<_AmountRequest?> _amountSheet(String title, String subtitle) {
-    final amount = TextEditingController();
-    final phone = TextEditingController();
-    return showModalBottomSheet<_AmountRequest>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(color: BoblyColors.slate)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amount,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'Amount (KES)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phone,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
-              decoration: const InputDecoration(labelText: 'M-Pesa number', hintText: '2547XXXXXXXX'),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                final a = int.tryParse(amount.text.trim());
-                final p = phone.text.trim();
-                if (a == null || a <= 0 || !RegExp(r'^2547\d{8}$').hasMatch(p)) {
-                  showInfo(ctx, 'Enter a whole amount and a 2547XXXXXXXX number');
-                  return;
-                }
-                Navigator.of(ctx).pop(_AmountRequest(a, p));
-              },
-              child: Text(title),
-            ),
-          ],
-        ),
+  Future<void> _openWithdraw(double available, double min) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => WithdrawScreen(walletId: widget.walletId, available: available, withdrawalMin: min),
       ),
     );
+    if (changed == true) _refresh();
   }
 
   @override
@@ -140,6 +72,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     final held = double.tryParse(w.held) ?? 0;
     final min = double.tryParse(w.withdrawalMin) ?? 0;
     final canWithdraw = available >= min && available > 0;
+    // Low while an active cycle still needs hourly contributions: Held > 0
+    // means a cycle is running, and Available < 1 can't cover the next hour.
+    final low = held > 0 && available < 1;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -164,14 +99,15 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             ),
           ),
         ),
+        if (low) const _LowBalanceBanner(),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: FilledButton(onPressed: _topup, child: const Text('Top up'))),
+            Expanded(child: FilledButton(onPressed: _openTopUp, child: const Text('Top up'))),
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton(
-                onPressed: canWithdraw ? _withdraw : null,
+                onPressed: canWithdraw ? () => _openWithdraw(available, min) : null,
                 child: Text(canWithdraw ? 'Withdraw' : 'Min ${formatKes(w.withdrawalMin)}'),
               ),
             ),
@@ -193,29 +129,51 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 
   Widget _entryTile(WalletEntry e) {
     final value = double.tryParse(e.amount) ?? 0;
-    final neutral = _neutralTypes.contains(e.type);
-    final color = neutral
-        ? BoblyColors.slate
-        : (value >= 0 ? BoblyColors.success : BoblyColors.danger);
-    // The payout receipt shows the fee breakdown (spec §5: fee on every receipt).
+    final neutral = neutralEntryTypes.contains(e.type);
+    final color = neutral ? BoblyColors.slate : (value >= 0 ? BoblyColors.success : BoblyColors.danger);
     final subtitle = e.type == 'payout'
         ? 'Pot KES 24.00 · fee KES 1.20 (5%) · you received'
-        : e.at;
+        : formatWhen(e.at);
     return Card(
       child: ListTile(
-        title: Text(_typeLabels[e.type] ?? e.type),
+        title: Text(entryLabels[e.type] ?? e.type),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: Text(
-          formatKes(e.amount),
-          style: TextStyle(fontWeight: FontWeight.w700, color: color),
+        trailing: Text(formatKes(e.amount), style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => TransactionDetailScreen(entry: e)),
         ),
       ),
     );
   }
 }
 
-class _AmountRequest {
-  final int amount;
-  final String phone;
-  const _AmountRequest(this.amount, this.phone);
+class _LowBalanceBanner extends StatelessWidget {
+  const _LowBalanceBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: BoblyColors.warning.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BoblyColors.warning.withOpacity(0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: BoblyColors.warning),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Your wallet is low. Top up to keep your hourly contributions going — you have a 6-hour grace '
+              'before a missed hour counts against you.',
+              style: TextStyle(color: BoblyColors.ink, fontSize: 13, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
