@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Built the NestJS HTTP API + hourly settlement scheduler over the engine | Working | 37 tests green; API+scheduler done. Next: M-Pesa Daraja, Flutter client |
+| Mara | S002 | claude-opus-4-8 | Wired M-Pesa Daraja top-up/withdrawal (callback-as-truth) into the wallet | Working | 45 tests green; M-Pesa done. Next: auth/OTP, Flutter client |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
