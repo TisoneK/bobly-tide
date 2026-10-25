@@ -30,6 +30,45 @@ class JoinResult {
       );
 }
 
+/// Outcome of leaving a filling group (POST /groups/:id/leave): the security
+/// hold is released and any wallet balance refunded out.
+class LeaveResult {
+  final bool left;
+  final String released;
+  final String refunded;
+  const LeaveResult({required this.left, required this.released, required this.refunded});
+
+  factory LeaveResult.fromJson(Map<String, dynamic> j) => LeaveResult(
+        left: j['left'] as bool? ?? true,
+        released: j['released'].toString(),
+        refunded: j['refunded'].toString(),
+      );
+}
+
+/// A pending KYC submission in the ops review queue (GET /admin/verifications).
+class PendingVerification {
+  final String userId;
+  final String phone;
+  final String kind; // email | id | face | address
+  final String? detail;
+  final String updatedAt;
+  const PendingVerification({
+    required this.userId,
+    required this.phone,
+    required this.kind,
+    required this.detail,
+    required this.updatedAt,
+  });
+
+  factory PendingVerification.fromJson(Map<String, dynamic> j) => PendingVerification(
+        userId: j['userId'] as String,
+        phone: j['phone'] as String,
+        kind: j['kind'] as String,
+        detail: j['detail'] as String?,
+        updatedAt: j['updatedAt'] as String,
+      );
+}
+
 /// The one pilot package (build spec §4 / backend DAILY_PACKAGE).
 abstract final class DailyPackage {
   static const String name = 'Daily';

@@ -59,6 +59,32 @@ class ApiClient {
   Future<void> withdraw(String walletId, int amount, String phone) =>
       _post('/wallets/$walletId/withdraw', {'amount': amount, 'phone': phone});
 
+  // --- cycle-end (require a token; only valid at the stated group state) ---
+  /// Leave a group that is still filling; releases the hold and refunds out.
+  Future<LeaveResult> leaveGroup(String groupId) async =>
+      LeaveResult.fromJson(await _post('/groups/$groupId/leave', const {}));
+
+  /// Renew after a completed cycle; the server allocates a fresh filling group.
+  Future<JoinResult> renewGroup(String groupId) async =>
+      JoinResult.fromJson(await _post('/groups/$groupId/renew', const {}));
+
+  // --- ops / admin (require an admin token; non-admins get 403) ---
+  /// KYC submissions awaiting an ops decision.
+  Future<List<PendingVerification>> adminPendingVerifications() async {
+    final list = await _getList('/admin/verifications');
+    return list
+        .map((e) => PendingVerification.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Approve or reject one submission; [decision] is 'verified' or 'rejected'.
+  Future<void> adminReview(String userId, String kind, String decision, {String? reason}) =>
+      _post('/admin/verifications/$userId/review', {
+        'kind': kind,
+        'decision': decision,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
+
   // --- plumbing ---
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final res = await _http.post(Uri.parse('$baseUrl$path'), headers: _headers, body: jsonEncode(body));
@@ -68,6 +94,21 @@ class ApiClient {
   Future<Map<String, dynamic>> _get(String path) async {
     final res = await _http.get(Uri.parse('$baseUrl$path'), headers: _headers);
     return _decode(res);
+  }
+
+  /// GET an endpoint that returns a JSON array (e.g. the admin review queue).
+  Future<List<dynamic>> _getList(String path) async {
+    final res = await _http.get(Uri.parse('$baseUrl$path'), headers: _headers);
+    dynamic data;
+    try {
+      data = res.body.isEmpty ? const [] : jsonDecode(res.body);
+    } catch (_) {
+      data = const [];
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(res.statusCode, _message(data, res.statusCode));
+    }
+    return data is List ? data : const [];
   }
 
   Map<String, dynamic> _decode(http.Response res) {

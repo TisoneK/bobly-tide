@@ -54,19 +54,27 @@ Tracks the member-app review against the spec. The app lives in
 - [x] Low-balance & empty-wallet warning, with the 6-hour grace period
   (banner on the wallet screen)
 - [x] "How it works" page (`how_it_works_screen.dart`)
-- [x] Cycle-end: renew / switch package / leave (on the group screen)
+- [x] Cycle-end: renew / switch package / leave (on the group screen) —
+  renew + leave are now live backend calls (`POST /groups/:id/renew|leave`)
 - [x] Help & dispute entry point (`help_screen.dart`)
+- [x] Ops KYC-review screen (`admin_kyc_screen.dart`) — lists
+  `GET /admin/verifications`, approve/reject via the review endpoint; reached
+  from the home menu, shows an "ops only" state for non-admins (403)
 - [ ] Estimated start time on the queue (needs fill-rate data)
-- [ ] ID-document capture/upload (currently a reference string stand-in)
+- [ ] ID-document & face capture/upload (currently a reference string
+  stand-in). **Decision (2026-10-25): capture must be the live camera, not a
+  gallery image** — face = selfie + liveness, ID = live photo of the
+  document (`ImageSource.camera`, never `.gallery`); email/address stay typed.
 
 > Built but, like the rest of the app, not compiled here (no Flutter SDK).
-> Renew / switch-package are placeholders (no backend endpoints yet); the
-> low-balance threshold is heuristic (Held > 0 and Available < 1) until the
-> backend exposes grace state.
+> Switch-package is a placeholder (Daily is the only pilot package); renew
+> and leave are live backend calls. The low-balance threshold is heuristic
+> (Held > 0 and Available < 1) until the backend exposes grace state.
 
 ## Smaller gaps
 
 - [x] Slots-remaining shown on the group/queue screen; [ ] estimated start
   still needs fill-rate data.
-- [ ] Group-stall handling if a joined member never secures (backend
-  follow-up, no auto-timeout yet).
+- [x] Group-stall handling if a joined member never secures — backend
+  scheduler dissolves + refunds filling groups past `FILL_TIMEOUT_MS`
+  (ADR-15).

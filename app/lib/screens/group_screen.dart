@@ -23,6 +23,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   Timer? _ticker;
   DateTime _now = DateTime.now();
   bool _securing = false;
+  bool _busy = false; // a cycle-end action (renew/leave) is in flight
 
   @override
   void initState() {
@@ -152,23 +153,45 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             const Text('Everyone got their turn. What next?', style: TextStyle(color: BoblyColors.slate)),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: () => showInfo(context, 'Renewing the same group opens at cycle end — coming to the pilot soon.'),
-              child: const Text('Renew this group'),
+              onPressed: _busy ? null : _renew,
+              child: _busy
+                  ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Renew — start a new cycle'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () => showInfo(context, 'Daily is the only package in the pilot; more packages come later.'),
+              onPressed: _busy
+                  ? null
+                  : () => showInfo(context, 'Daily is the only package in the pilot; more packages come later.'),
               child: const Text('Switch package'),
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: _confirmLeave,
+              onPressed: _busy ? null : _confirmLeave,
               child: const Text('Leave', style: TextStyle(color: BoblyColors.danger)),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Renew after a completed cycle: the server places us in a fresh filling
+  /// group; we point the app at it and open its screen.
+  Future<void> _renew() async {
+    setState(() => _busy = true);
+    try {
+      final join = await ref.read(apiClientProvider).renewGroup(widget.groupId);
+      if (!mounted) return;
+      ref.read(membershipProvider.notifier).set(Membership(join.groupId, join));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => GroupScreen(groupId: join.groupId)),
+      );
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _confirmLeave() async {
@@ -183,9 +206,23 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         ],
       ),
     );
-    if (leave == true && mounted) {
+    if (leave != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final result = await ref.read(apiClientProvider).leaveGroup(widget.groupId);
+      if (!mounted) return;
       ref.read(membershipProvider.notifier).clear();
+      final refunded = double.tryParse(result.refunded) ?? 0;
+      if (refunded > 0) {
+        showInfo(context, 'You left the group. ${formatKes(result.refunded)} is on its way to your M-Pesa.');
+      } else {
+        showInfo(context, 'You left the group.');
+      }
       Navigator.of(context).popUntil((r) => r.isFirst);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
