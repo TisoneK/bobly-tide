@@ -160,6 +160,22 @@ export class VerificationService {
   }
 
   /**
+   * Record a KYC job that the client SDK created and submitted itself
+   * (ADR-25). The Smile ID Flutter SDK's capture widgets own the vendor job,
+   * so the app reports the job id it got back; the result callback then
+   * matches on it. Idempotent for a repeated job id, and leaves the item
+   * pending until the vendor callback (or an ops review) resolves it.
+   */
+  async attachKycJob(userId: string, kind: KycKind, providerRef: string): Promise<VerificationStatus> {
+    const existing = await this.store.findJobByRef(providerRef);
+    if (!existing) {
+      await this.store.createJob({ id: randomUUID(), providerRef, userId, kind });
+    }
+    await this.store.upsert(userId, kind, 'pending', `vendor:${providerRef}`, randomUUID);
+    return 'pending';
+  }
+
+  /**
    * Resolve an async KYC result callback from the vendor. Verifies + parses
    * the payload (via the provider), matches it to the pending job, and sets
    * the verification item. Idempotent and safe against unmatched or unsigned

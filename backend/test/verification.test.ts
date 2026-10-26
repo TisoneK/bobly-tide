@@ -3,7 +3,7 @@ import { newDb } from 'pg-mem';
 import { describe, expect, it } from 'vitest';
 import { AuthStore } from '../src/auth/auth.store';
 import { runMigrations } from '../src/db/migrate';
-import { FakeEmailSender, FakeKycProvider } from '../src/verification/providers';
+import { FakeEmailSender, FakeKycProvider, type KycProvider } from '../src/verification/providers';
 import {
   InvalidEmailCodeError,
   VerificationRequiredError,
@@ -70,6 +70,36 @@ describe('VerificationService — documents', () => {
     await svc.submit(userId, 'face', 'selfie-ref');
     await svc.review(userId, 'face', 'rejected', 'blurry');
     expect((await svc.status(userId)).items.face).toBe('rejected');
+  });
+});
+
+describe('VerificationService — SDK-owned jobs (ADR-25)', () => {
+  it('records a job the SDK created and resolves it from the vendor callback', async () => {
+    const db = newDb();
+    const pool = new (db.adapters.createPg().Pool)() as unknown as Pool;
+    await runMigrations(pool);
+    const userId = await new AuthStore(pool).findOrCreateUserByPhone('254700000002');
+    const kyc: KycProvider = {
+      review: async () => ({ decision: 'pending' }),
+      parseCallback: (payload) => {
+        const id = (payload as { job_id?: string })?.job_id;
+        return id ? { providerRef: id, decision: 'verified' as const } : null;
+      },
+    };
+    const svc = new VerificationService(new VerificationStore(pool), new FakeEmailSender(), kyc, CONFIG);
+
+    expect(await svc.attachKycJob(userId, 'id', 'sdk-job-1')).toBe('pending');
+    expect((await svc.status(userId)).items.id).toBe('pending');
+    // Idempotent for a repeated report with the same job id.
+    await svc.attachKycJob(userId, 'id', 'sdk-job-1');
+
+    expect(await svc.resolveKycCallback({ job_id: 'sdk-job-1' })).toEqual({
+      matched: true,
+      decision: 'verified',
+    });
+    expect((await svc.status(userId)).items.id).toBe('verified');
+    // An unknown job id moves nothing.
+    expect(await svc.resolveKycCallback({ job_id: 'nope' })).toEqual({ matched: false });
   });
 });
 

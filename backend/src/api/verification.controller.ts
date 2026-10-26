@@ -60,6 +60,25 @@ export class VerificationController {
     return { kind, status };
   }
 
+  /** Record a KYC job the client SDK created itself (ADR-25) so the vendor's
+   *  result callback can resolve it. Used by the Flutter SDK's capture
+   *  widgets, which own the job and return its id on success. */
+  @Post('kyc/attach')
+  @HttpCode(200)
+  async attach(
+    @Body() body: { kind?: unknown; jobId?: unknown },
+    @CurrentUser() user: SessionClaims,
+  ) {
+    const kind = body?.kind;
+    if (typeof kind !== 'string' || !KYC_KINDS.includes(kind as KycKind)) {
+      throw new BadRequestException(`kind must be one of ${KYC_KINDS.join(', ')}`);
+    }
+    const jobId = typeof body?.jobId === 'string' ? body.jobId.trim() : '';
+    if (!jobId || jobId.length > 200) throw new BadRequestException('a vendor jobId is required');
+    const status = await this.svc.attachKycJob(user.sub, kind as KycKind, jobId);
+    return { kind, status };
+  }
+
   /** Authorize a live-camera upload + liveness run straight to the KYC vendor.
    *  Returns the signed job the client SDK needs; the vendor resolves it later
    *  via its result callback. 400 if no async vendor is configured. */
