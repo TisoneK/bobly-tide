@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Client KYC swapped to on-device Smile ID SDK (ADR-19), driven by /verification/kyc/authorize | Working | Client wired (uncompiled, no SDK); smile_id version + SDK call site need compile-confirming; backend 78 tests green |
+| Mara | S002 | claude-opus-4-8 | Per-user concurrent group-join limit (ADR-20, §8.5): cap in createMembershipForUser, GROUP_JOIN_LIMIT | Working | Backend done, 82 tests green (4 new) + typecheck clean |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
