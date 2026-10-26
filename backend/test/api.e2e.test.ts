@@ -227,8 +227,33 @@ describe('HTTP API (e2e)', () => {
     const http = app.getHttpServer();
     const member = await login(http, phoneFor(1));
     await request(http).get('/admin/verifications').set('Authorization', member).expect(403);
+    await request(http).get('/admin/groups').set('Authorization', member).expect(403);
     const admin = await login(http, ADMIN_PHONE);
     await request(http).get('/admin/verifications').set('Authorization', admin).expect(200);
+    await request(http).get('/admin/groups').set('Authorization', admin).expect(200);
+  });
+
+  it('gives admins group + member oversight', async () => {
+    const http = app.getHttpServer();
+    const bearer = await login(http, phoneFor(1));
+    await verifyFully(http, bearer, emailFor(1));
+    const join = await request(http).post('/packages/daily/join').set('Authorization', bearer).expect(201);
+    const admin = await login(http, ADMIN_PHONE);
+
+    const list = await request(http).get('/admin/groups?limit=10').set('Authorization', admin).expect(200);
+    expect(list.body.length).toBeGreaterThanOrEqual(1);
+    const row = list.body.find((g: { id: string }) => g.id === join.body.groupId);
+    expect(row).toMatchObject({ state: 'filling', joined: 1, secured: 0, size: pkg.size });
+
+    const detail = await request(http)
+      .get(`/admin/groups/${join.body.groupId}`)
+      .set('Authorization', admin)
+      .expect(200);
+    expect(detail.body.members).toHaveLength(1);
+    expect(detail.body.members[0]).toMatchObject({ joinOrder: 1, state: 'active', secured: false });
+    expect(detail.body.members[0].phone).toBe(phoneFor(1)); // unmasked for ops
+
+    await request(http).get('/admin/groups/not-a-uuid').set('Authorization', admin).expect(404);
   });
 
   it('lets a member leave a group that has not started', async () => {

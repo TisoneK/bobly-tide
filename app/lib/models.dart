@@ -110,6 +110,95 @@ class PendingVerification {
       );
 }
 
+/// A group summary row in the ops console (GET /admin/groups).
+class AdminGroupSummary {
+  final String id;
+  final String state;
+  final int size;
+  final int joined;
+  final int secured;
+  final String createdAt;
+  final String? startAt;
+  const AdminGroupSummary({
+    required this.id,
+    required this.state,
+    required this.size,
+    required this.joined,
+    required this.secured,
+    required this.createdAt,
+    required this.startAt,
+  });
+
+  factory AdminGroupSummary.fromJson(Map<String, dynamic> j) => AdminGroupSummary(
+        id: j['id'] as String,
+        state: j['state'] as String,
+        size: (j['size'] as num).toInt(),
+        joined: (j['joined'] as num?)?.toInt() ?? 0,
+        secured: (j['secured'] as num?)?.toInt() ?? 0,
+        createdAt: j['createdAt'] as String,
+        startAt: j['startAt'] as String?,
+      );
+}
+
+/// A member row in the ops group-detail view — unmasked phone (admins only).
+class AdminMember {
+  final int joinOrder;
+  final int? turnPosition;
+  final String state;
+  final String? name;
+  final String phone;
+  final bool secured;
+  const AdminMember({
+    required this.joinOrder,
+    required this.turnPosition,
+    required this.state,
+    required this.name,
+    required this.phone,
+    required this.secured,
+  });
+
+  factory AdminMember.fromJson(Map<String, dynamic> j) => AdminMember(
+        joinOrder: (j['joinOrder'] as num).toInt(),
+        turnPosition: (j['turnPosition'] as num?)?.toInt(),
+        state: j['state'] as String,
+        name: j['name'] as String?,
+        phone: j['phone'] as String,
+        secured: j['secured'] as bool? ?? false,
+      );
+}
+
+/// A group's detail in the ops console (GET /admin/groups/:id).
+class AdminGroupDetail {
+  final String id;
+  final String state;
+  final int size;
+  final String? startAt;
+  final int joined;
+  final int secured;
+  final List<AdminMember> members;
+  const AdminGroupDetail({
+    required this.id,
+    required this.state,
+    required this.size,
+    required this.startAt,
+    required this.joined,
+    required this.secured,
+    required this.members,
+  });
+
+  factory AdminGroupDetail.fromJson(Map<String, dynamic> j) => AdminGroupDetail(
+        id: j['id'] as String,
+        state: j['state'] as String,
+        size: (j['size'] as num).toInt(),
+        startAt: j['startAt'] as String?,
+        joined: (j['joined'] as num?)?.toInt() ?? 0,
+        secured: (j['secured'] as num?)?.toInt() ?? 0,
+        members: ((j['members'] as List?) ?? const [])
+            .map((m) => AdminMember.fromJson(m as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
 /// The one pilot package (build spec §4 / backend DAILY_PACKAGE).
 abstract final class DailyPackage {
   static const String name = 'Daily';

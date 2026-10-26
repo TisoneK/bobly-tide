@@ -143,6 +143,8 @@ member — 403 with the missing items otherwise (ADR-12).
 | `GET /wallets/:id` | Balance + entry history (owner-only) |
 | `GET /admin/verifications` | Pending KYC submissions (admin-only) |
 | `POST /admin/verifications/:userId/review` | Approve/reject a submission (admin-only) |
+| `GET /admin/groups` | Group summaries for oversight, newest first (admin-only) |
+| `GET /admin/groups/:id` | One group's members + states, unmasked phone (admin-only) |
 
 The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
 on an interval: for each active group it settles every hour that has come
@@ -153,12 +155,19 @@ all secured is dissolved and everyone is refunded, so no one's money is
 stuck. The "hour" duration is configurable (`HOUR_MS`) so a pilot or a test
 can run accelerated time.
 
-## Admin / ops (ADR-15)
+## Admin / ops (ADR-15, ADR-23)
 
 Admins are identified by phone (`ADMIN_PHONES`, no forgeable role claim); an
-`AdminGuard` runs after `AuthGuard`. For the pilot the ops console is KYC
-review: list pending submissions and approve/reject them (resolving the
-`pending` state a real KYC vendor would otherwise leave).
+`AdminGuard` runs after `AuthGuard`. The ops console (a tabbed screen in the
+Flutter app, ADR-23) covers:
+
+- **KYC review** — list pending submissions and approve/reject them (resolving
+  the `pending` state a real KYC vendor would otherwise leave).
+- **Group/member oversight** — `GET /admin/groups` lists groups with
+  state + joined/secured counts (newest first, capped); `GET /admin/groups/:id`
+  shows a group's members, their states and turn positions, with the member's
+  **unmasked** phone (admin-only, for support/disputes — members never see
+  each other's full number).
 
 ## Fraud & abuse limits (product spec §8.5, ADR-20)
 

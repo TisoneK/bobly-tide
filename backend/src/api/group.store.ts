@@ -315,6 +315,57 @@ export class GroupStore {
     return Promise.all(stale.map((r) => this.getGroup(r.id)));
   }
 
+  /** Group summaries for the ops console (ADR-23), newest first. */
+  async adminListGroups(limit: number): Promise<
+    { id: string; state: string; createdAt: string; startAt: string | null; joined: number; secured: number }[]
+  > {
+    const g = await this.pool.query<{ id: string; state: string; created_at: string | Date; start_at: string | Date | null }>(
+      'SELECT id, state, created_at, start_at FROM "group" ORDER BY created_at DESC LIMIT $1',
+      [limit],
+    );
+    return Promise.all(
+      g.rows.map(async (r) => {
+        const loaded = await this.getGroup(r.id);
+        return {
+          id: r.id,
+          state: r.state,
+          createdAt: new Date(r.created_at).toISOString(),
+          startAt: r.start_at ? new Date(r.start_at).toISOString() : null,
+          joined: loaded.memberships.length,
+          secured: loaded.memberships.filter((m) => m.turnPosition != null).length,
+        };
+      }),
+    );
+  }
+
+  /** Members of a group for the ops console — unmasked phone (admins only,
+   *  behind AdminGuard) so ops can identify a member for support/disputes. */
+  async adminMemberViews(
+    groupId: string,
+  ): Promise<{ joinOrder: number; turnPosition: number | null; state: string; phone: string; name: string | null }[]> {
+    if (!isUuid(groupId)) return [];
+    const res = await this.pool.query<{
+      join_order: number | string;
+      turn_position: number | string | null;
+      state: string;
+      phone: string;
+      display_name: string | null;
+    }>(
+      `SELECT m.join_order, m.turn_position, m.state, u.phone, u.display_name
+       FROM membership m JOIN app_user u ON u.id = m.user_id
+       WHERE m.group_id = $1
+       ORDER BY m.join_order`,
+      [groupId],
+    );
+    return res.rows.map((r) => ({
+      joinOrder: Number(r.join_order),
+      turnPosition: r.turn_position == null ? null : Number(r.turn_position),
+      state: r.state,
+      phone: r.phone,
+      name: r.display_name,
+    }));
+  }
+
   async setMembershipState(membershipId: string, state: Membership['state']): Promise<void> {
     await this.pool.query('UPDATE membership SET state = $1 WHERE id = $2', [state, membershipId]);
   }

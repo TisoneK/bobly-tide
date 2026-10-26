@@ -91,6 +91,18 @@ class ApiClient {
         if (reason != null && reason.isNotEmpty) 'reason': reason,
       });
 
+  /// Group summaries for ops oversight, newest first.
+  Future<List<AdminGroupSummary>> adminListGroups({int limit = 50}) async {
+    final list = await _getList('/admin/groups?limit=$limit');
+    return list
+        .map((e) => AdminGroupSummary.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// One group's members + states for ops oversight.
+  Future<AdminGroupDetail> adminGroupDetail(String id) async =>
+      AdminGroupDetail.fromJson(await _get('/admin/groups/$id'));
+
   // --- plumbing ---
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final res = await _http.post(Uri.parse('$baseUrl$path'), headers: _headers, body: jsonEncode(body));

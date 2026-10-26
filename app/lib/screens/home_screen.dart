@@ -6,10 +6,10 @@ import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/format.dart';
 import '../widgets/ui.dart';
-import 'admin_kyc_screen.dart';
 import 'group_screen.dart';
 import 'help_screen.dart';
 import 'how_it_works_screen.dart';
+import 'ops_console_screen.dart';
 import 'verification_screen.dart';
 import 'wallet_screen.dart';
 
@@ -73,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               } else if (v == 'help') {
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
               } else if (v == 'ops') {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminKycScreen()));
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OpsConsoleScreen()));
               } else if (v == 'signout') {
                 _signOut();
               }
@@ -81,7 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'how', child: Text('How it works')),
               PopupMenuItem(value: 'help', child: Text('Help & disputes')),
-              PopupMenuItem(value: 'ops', child: Text('Ops: KYC review')),
+              PopupMenuItem(value: 'ops', child: Text('Ops console')),
               PopupMenuItem(value: 'signout', child: Text('Sign out')),
             ],
           ),

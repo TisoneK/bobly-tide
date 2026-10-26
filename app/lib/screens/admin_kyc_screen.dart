@@ -6,18 +6,18 @@ import '../models.dart';
 import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
+import 'ops_common.dart';
 
-/// Ops-only KYC review queue (backend /admin — AdminGuard by ADMIN_PHONES).
-/// Non-admins reach this screen from the menu but get a 403, shown as a
-/// friendly "ops only" state rather than an error snackbar.
-class AdminKycScreen extends ConsumerStatefulWidget {
-  const AdminKycScreen({super.key});
+/// KYC review queue tab in the ops console (backend /admin — AdminGuard by
+/// ADMIN_PHONES). Non-admins get a 403, shown as a friendly "ops only" state.
+class KycReviewTab extends ConsumerStatefulWidget {
+  const KycReviewTab({super.key});
 
   @override
-  ConsumerState<AdminKycScreen> createState() => _AdminKycScreenState();
+  ConsumerState<KycReviewTab> createState() => _KycReviewTabState();
 }
 
-class _AdminKycScreenState extends ConsumerState<AdminKycScreen> {
+class _KycReviewTabState extends ConsumerState<KycReviewTab> {
   late Future<List<PendingVerification>> _future;
 
   /// Rows currently being decided, keyed by '<userId>:<kind>', so a single
@@ -80,34 +80,28 @@ class _AdminKycScreenState extends ConsumerState<AdminKycScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('KYC review'),
-        actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))],
-      ),
-      body: FutureBuilder<List<PendingVerification>>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            final err = snap.error;
-            if (err is ApiException && err.status == 403) return const _NotOps();
-            return ErrorRetry(error: err!, onRetry: _refresh);
-          }
-          final pending = snap.data!;
-          if (pending.isEmpty) return const _EmptyQueue();
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: pending.length,
-              itemBuilder: (_, i) => _reviewCard(pending[i]),
-            ),
-          );
-        },
-      ),
+    return FutureBuilder<List<PendingVerification>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          final err = snap.error;
+          if (err is ApiException && err.status == 403) return const NotOpsView();
+          return ErrorRetry(error: err!, onRetry: _refresh);
+        }
+        final pending = snap.data!;
+        if (pending.isEmpty) return const _EmptyQueue();
+        return RefreshIndicator(
+          onRefresh: () async => _refresh(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: pending.length,
+            itemBuilder: (_, i) => _reviewCard(pending[i]),
+          ),
+        );
+      },
     );
   }
 
@@ -205,31 +199,6 @@ class _AdminKycScreenState extends ConsumerState<AdminKycScreen> {
     if (d.inMinutes < 60) return '${d.inMinutes}m ago';
     if (d.inHours < 24) return '${d.inHours}h ago';
     return '${d.inDays}d ago';
-  }
-}
-
-class _NotOps extends StatelessWidget {
-  const _NotOps();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_outline, size: 40, color: BoblyColors.slate),
-            SizedBox(height: 12),
-            Text('Ops access only',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            SizedBox(height: 6),
-            Text('This review queue is for Bobly Tide operators. Your account is not an ops admin.',
-                textAlign: TextAlign.center, style: TextStyle(color: BoblyColors.slate)),
-          ],
-        ),
-      ),
-    );
   }
 }
 
