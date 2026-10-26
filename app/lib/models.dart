@@ -1,4 +1,4 @@
-/// Plain data models mirroring the backend JSON (see backend/README.md).
+// Plain data models mirroring the backend JSON (see backend/README.md).
 
 class Session {
   final String token;

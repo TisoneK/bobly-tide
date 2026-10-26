@@ -115,7 +115,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             secured ? 'Secured' : (m.state == 'active' ? 'Not secured yet' : m.state),
           ].join(' · ');
           return Card(
-            color: m.isYou ? BoblyColors.primaryLight.withOpacity(0.08) : null,
+            color: m.isYou ? BoblyColors.primaryLight.withValues(alpha: 0.08) : null,
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: m.isYou ? BoblyColors.primary : BoblyColors.mist,
@@ -244,7 +244,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     }
 
     return Card(
-      color: BoblyColors.primaryLight.withOpacity(0.08),
+      color: BoblyColors.primaryLight.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(

@@ -156,16 +156,16 @@ class _LowBalanceBanner extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: BoblyColors.warning.withOpacity(0.12),
+        color: BoblyColors.warning.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BoblyColors.warning.withOpacity(0.4)),
+        border: Border.all(color: BoblyColors.warning.withValues(alpha: 0.4)),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: BoblyColors.warning),
-          const SizedBox(width: 10),
-          const Expanded(
+          Icon(Icons.warning_amber_rounded, color: BoblyColors.warning),
+          SizedBox(width: 10),
+          Expanded(
             child: Text(
               'Your wallet is low. Top up to keep your hourly contributions going — you have a 6-hour grace '
               'before a missed hour counts against you.',

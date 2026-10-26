@@ -6,10 +6,10 @@ join + queue, group/turn view, and wallet + receipts — against the
 (build spec §9, ADR-3).
 
 > **Compiled and tested on Windows** (2026-10-26, Flutter 3.47.8 / Dart 3.13.7):
-> `flutter analyze` reports 0 errors (13 info-level lints), `flutter test` passes
-> 8/8, and `android/` + `ios/` platform folders are generated. Still unverified:
-> running on a device/emulator (no Android SDK here) and the Smile ID KYC flow
-> (see "Known gaps" below).
+> `flutter analyze` is clean, `flutter test` passes 8/8, `flutter build web` and
+> `flutter build apk --debug` succeed. Still unverified: running on a physical
+> device and the Smile ID KYC round-trip (needs vendor config + credentials —
+> see "Known gaps" below).
 >
 > Prerequisites: Flutter >= 3.22 (`flutter --version`), then `flutter pub get`.
 > Platform targets generated: **android, ios, web, windows**. `flutter build web`
@@ -95,15 +95,15 @@ lib/widgets/             formatting + shared UI helpers
 
 - The session token is kept in memory only — add secure storage so it
   survives app restarts.
-- **KYC job ownership is unresolved.** The pinned `smile_id` 10.4.3 widget API
-  takes `userId`/`jobId` but cannot consume the server-signed job authorization
-  our backend issues (partnerId/timestamp/signature/product, ADR-19), so the
-  SDK creates its own job and the vendor callback's `job_id` will not match the
-  `kyc_job` row. Options: `extraPartnerParams` + `skipApiSubmission`, or move job
-  ownership to the SDK and map its returned jobId. Needs a device + sandbox
-  credentials; see `lib/kyc/smile_kyc.dart`.
+- **KYC job ownership (ADR-25).** The `smile_id` 10.x widgets create and submit
+  the vendor job themselves; the app reports the returned `job_id` to
+  `POST /verification/kyc/attach` so the vendor callback resolves our `kyc_job`
+  row. Still needed to run it for real: the vendor's `smile_config.json`
+  (Android assets) / `SmileIDConfig.plist` (iOS) plus sandbox credentials, and a
+  device. The server-signed `POST /verification/kyc/authorize` path is retained
+  for a future server-submit integration but is unused by the app.
 - KYC ID/face capture runs through the **Smile ID SDK** (`lib/kyc/smile_kyc.dart`),
-  but the `smile_id` call sites are compile-verified only (not run on a device).
-  Proof-of-address is still a plain reference submit (not a Smile product).
+  compile-verified but not run on a device. Proof-of-address is still a plain
+  reference submit (not a Smile product).
 - No push/SMS notifications, no switch-package UI, no offline cache — out of
   scope for the pilot slice (build spec §2.2). (Renew/leave are wired.)

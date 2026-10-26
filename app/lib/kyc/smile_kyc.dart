@@ -1,33 +1,29 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:smile_id/smile_id.dart';
 import 'package:smile_id/smile_id_document_verification.dart';
 import 'package:smile_id/smile_id_smart_selfie_enrollment.dart';
-
-import '../models.dart';
 
 /// All Smile ID SDK usage is isolated in this one file, so the vendor API
 /// touches a single, swappable seam.
 ///
-/// NOTE: reconciled against the `smile_id` 10.4.3 widget API (the line
-/// `pubspec.yaml` pins). The SDK exposes full-screen capture *widgets* —
-/// `SmileIDSmartSelfieEnrollment` / `SmileIDDocumentVerification` — whose
-/// `onSuccess` / `onError` receive a JSON string, not the static factory
-/// methods this file originally assumed. The SDK captures the selfie /
-/// document and runs liveness on-device and uploads straight to Smile ID;
-/// our server never sees the images, and the result arrives via the
-/// backend's /verification/callbacks/kyc endpoint.
+/// Job ownership (ADR-25): the pinned `smile_id` 10.x capture *widgets* create
+/// and submit the vendor job themselves — they cannot consume a job our server
+/// signs (no partnerId/timestamp/signature parameters). So the SDK owns the
+/// job, the app reports the returned job id to `POST /verification/kyc/attach`,
+/// and the vendor's result callback resolves that `kyc_job` row. The backend
+/// keeps its server-signed `authorizeUpload` path for a future server-submit
+/// integration; the app does not use it.
 ///
-/// OPEN: this 10.x widget API takes `userId` (and `jobId` on document jobs)
-/// but has no parameter for the server-signed job authorization our backend
-/// issues (partnerId / timestamp / signature / product, ADR-19), so the SDK
-/// currently creates its own job and the callback's job_id will not match the
-/// `kyc_job` row we opened. Aligning the two needs either `extraPartnerParams`
-/// + `skipApiSubmission` (server-issued jobs) or moving job ownership to the
-/// SDK and mapping its returned jobId — decide with a device + sandbox
-/// credentials before the KYC flow is called production-ready.
+/// The SDK captures the selfie / document and runs liveness on-device, then
+/// uploads straight to Smile ID: our server never sees the images. The actual
+/// capture needs the vendor's `smile_config.json` (Android assets) /
+/// `SmileIDConfig.plist` (iOS) plus sandbox credentials, which are not in the
+/// repo — without them the widgets fail at launch, so this layer is
+/// compile-verified only until a device with credentials is available.
 
-typedef SmileDone = void Function(bool success, String? error);
+typedef SmileDone = void Function(bool success, String? error, String? resultJson);
 
 /// The Smile ID capture widgets are Android/iOS only. Web and desktop builds
 /// (dev previews) still compile the app, but KYC capture is unavailable there —
@@ -38,8 +34,30 @@ bool get smileKycSupported =>
     (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS);
 
-/// Build the full-screen Smile ID capture flow for this KYC job.
-Widget smileKycFlow({required KycUploadAuth auth, required SmileDone onDone}) {
+/// Extract the vendor job id from the SDK's success payload. The 10.x widgets
+/// hand back a JSON string; the id is `job_id` (snake) or `jobId` (camel)
+/// depending on the native bridge.
+String? smileJobId(String? resultJson) {
+  if (resultJson == null || resultJson.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(resultJson);
+    if (decoded is Map) {
+      final id = decoded['job_id'] ?? decoded['jobId'];
+      if (id is String && id.isNotEmpty) return id;
+    }
+  } on FormatException {
+    return null;
+  }
+  return null;
+}
+
+/// Build the full-screen Smile ID capture flow for this KYC kind ('id' or
+/// 'face').
+Widget smileKycFlow({
+  required String userId,
+  required String kind,
+  required SmileDone onDone,
+}) {
   if (!smileKycSupported) {
     return const Center(
       child: Padding(
@@ -52,28 +70,27 @@ Widget smileKycFlow({required KycUploadAuth auth, required SmileDone onDone}) {
       ),
     );
   }
-  switch (auth.kind) {
+  switch (kind) {
     case 'face':
       // Selfie + liveness (SmartSelfie enrollment).
       return SmileIDSmartSelfieEnrollment(
-        userId: auth.userId,
+        userId: userId,
         showInstructions: true,
         showAttribution: true,
         allowAgentMode: false,
-        onSuccess: (String result) => onDone(true, null),
-        onError: (String error) => onDone(false, error),
+        onSuccess: (String result) => onDone(true, null, result),
+        onError: (String error) => onDone(false, error, null),
       );
     case 'id':
     default:
       // Document authenticity + selfie-to-ID compare + liveness.
       return SmileIDDocumentVerification(
-        userId: auth.userId,
-        jobId: auth.jobId,
+        userId: userId,
         countryCode: 'KE',
         showInstructions: true,
         showAttribution: true,
-        onSuccess: (String result) => onDone(true, null),
-        onError: (String error) => onDone(false, error),
+        onSuccess: (String result) => onDone(true, null, result),
+        onError: (String error) => onDone(false, error, null),
       );
   }
 }

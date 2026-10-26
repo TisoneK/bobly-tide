@@ -141,7 +141,7 @@ class _KycReviewTabState extends ConsumerState<KycReviewTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: BoblyColors.mist.withOpacity(0.5),
+                  color: BoblyColors.mist.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(v.detail!, style: const TextStyle(fontSize: 13)),

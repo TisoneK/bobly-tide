@@ -158,7 +158,7 @@ class _PackageCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: BoblyColors.payout.withOpacity(0.15),
+                    color: BoblyColors.payout.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text('${formatKes(DailyPackage.payout)} / turn',
@@ -202,7 +202,7 @@ class _JoinCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: BoblyColors.mist.withOpacity(0.5),
+                color: BoblyColors.mist.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(

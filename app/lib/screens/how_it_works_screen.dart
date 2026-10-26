@@ -61,7 +61,7 @@ class _Trust extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BoblyColors.mist.withOpacity(0.5),
+        color: BoblyColors.mist.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Text(

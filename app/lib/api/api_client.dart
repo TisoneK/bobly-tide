@@ -37,9 +37,15 @@ class ApiClient {
   Future<void> submitKyc(String kind, String reference) =>
       _post('/verification/submit', {'kind': kind, 'reference': reference});
 
+  /// Report a vendor job the on-device SDK created and submitted itself
+  /// (ADR-25), so the vendor's result callback can resolve our kyc_job row.
+  Future<void> attachKycJob(String kind, String jobId) =>
+      _post('/verification/kyc/attach', {'kind': kind, 'jobId': jobId});
+
   /// Authorize an on-device KYC capture (selfie/ID + liveness) with the vendor.
   /// Returns the signed job the Smile ID SDK runs; the backend resolves the
-  /// result via its callback.
+  /// result via its callback. Kept for server-issued-job integrations; the
+  /// bundled Flutter SDK owns its own job (see [attachKycJob] and ADR-25).
   Future<KycUploadAuth> authorizeKyc(String kind) async =>
       KycUploadAuth.fromJson(await _post('/verification/kyc/authorize', {'kind': kind}));
 

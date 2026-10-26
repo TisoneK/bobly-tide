@@ -169,7 +169,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 OutlinedButton(
                   onPressed: () => _run(() async {
                     await ref.read(apiClientProvider).requestEmailCode(_email.text.trim());
-                    if (mounted) setState(() => _emailSent = true);
+                    if (!mounted) return;
+                    setState(() => _emailSent = true);
                     showInfo(context, 'We emailed you a 6-digit code');
                   }),
                   child: const Text('Send code'),
