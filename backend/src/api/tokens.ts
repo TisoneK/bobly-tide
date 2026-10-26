@@ -20,6 +20,10 @@ export const VERIFICATION_CONFIG = Symbol('VERIFICATION_CONFIG');
 export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
 export const KYC_PROVIDER = Symbol('KYC_PROVIDER');
 export const ADMIN_CONFIG = Symbol('ADMIN_CONFIG');
+export const SECURITY_STORE = Symbol('SECURITY_STORE');
+export const SECURITY_SERVICE = Symbol('SECURITY_SERVICE');
+export const SECURITY_CONFIG = Symbol('SECURITY_CONFIG');
+export const ALERT_SINK = Symbol('ALERT_SINK');
 
 export interface SchedulerConfig {
   /** Start the background interval. Off in tests (they drive ticks directly). */

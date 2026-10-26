@@ -10,6 +10,7 @@ import { Money } from './domain/money';
 import { DAILY_PACKAGE } from './domain/packages';
 import { type DarajaClient, FakeDarajaClient, HttpDarajaClient } from './mpesa/daraja';
 import { ONE_HOUR_MS } from './scheduler';
+import { type AlertSink, LogAlertSink, WebhookAlertSink } from './security/alert';
 import { FakeKycProvider, type KycProvider, LogEmailSender } from './verification/providers';
 import { SmileIdKycProvider } from './verification/smile';
 import type { VerificationKind } from './verification/verification.store';
@@ -77,6 +78,14 @@ function buildKyc(): KycProvider {
   return new FakeKycProvider(auto);
 }
 
+/** Post security alerts to a webhook when configured, else log them. */
+function buildAlertSink(): AlertSink {
+  const url = env['ALERT_WEBHOOK_URL'];
+  if (url) return new WebhookAlertSink(url);
+  console.warn('ALERT_WEBHOOK_URL not set — security alerts are logged to stderr only');
+  return new LogAlertSink();
+}
+
 const jwt = jwtSecret();
 const requiredKinds = (env['VERIFICATION_REQUIRED'] ?? 'email,id,face,address')
   .split(',')
@@ -124,6 +133,11 @@ const app = await NestFactory.create(
       ),
     },
     groupJoinLimit: Number(env['GROUP_JOIN_LIMIT'] ?? 3),
+    alert: buildAlertSink(),
+    security: {
+      alertWindowMs: Number(env['SECURITY_ALERT_WINDOW_MS'] ?? 10 * 60_000),
+      alertThreshold: Number(env['SECURITY_ALERT_THRESHOLD'] ?? 5),
+    },
   }),
 );
 

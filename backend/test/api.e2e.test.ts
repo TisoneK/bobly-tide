@@ -12,6 +12,7 @@ import { Money } from '../src/domain/money';
 import { DAILY_PACKAGE } from '../src/domain/packages';
 import { runMigrations } from '../src/db/migrate';
 import { FakeDarajaClient } from '../src/mpesa/daraja';
+import { FakeAlertSink } from '../src/security/alert';
 import { ONE_HOUR_MS } from '../src/scheduler';
 import { FakeEmailSender, FakeKycProvider } from '../src/verification/providers';
 
@@ -94,6 +95,8 @@ describe('HTTP API (e2e)', () => {
           },
           admin: { phones: new Set([ADMIN_PHONE]) },
           groupJoinLimit: 3,
+          alert: new FakeAlertSink(),
+          security: { alertWindowMs: 600_000, alertThreshold: 5 },
         }),
       ],
     }).compile();
@@ -231,6 +234,22 @@ describe('HTTP API (e2e)', () => {
     const admin = await login(http, ADMIN_PHONE);
     await request(http).get('/admin/verifications').set('Authorization', admin).expect(200);
     await request(http).get('/admin/groups').set('Authorization', admin).expect(200);
+  });
+
+  it('records security events and shows them to admins only', async () => {
+    const http = app.getHttpServer();
+    const member = await login(http, phoneFor(2));
+    // A non-admin hitting the console is a denied-authorization event.
+    await request(http).get('/admin/security-events').set('Authorization', member).expect(403);
+    await request(http).get('/admin/verifications').set('Authorization', member).expect(403);
+    // No bearer at all is a failed-auth event.
+    await request(http).get('/admin/groups').expect(401);
+
+    const admin = await login(http, ADMIN_PHONE);
+    const events = await request(http).get('/admin/security-events').set('Authorization', admin).expect(200);
+    const types = (events.body as { type: string }[]).map((e) => e.type);
+    expect(types).toContain('admin_denied');
+    expect(types).toContain('auth_failed');
   });
 
   it('gives admins group + member oversight', async () => {

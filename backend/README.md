@@ -145,6 +145,7 @@ member — 403 with the missing items otherwise (ADR-12).
 | `POST /admin/verifications/:userId/review` | Approve/reject a submission (admin-only) |
 | `GET /admin/groups` | Group summaries for oversight, newest first (admin-only) |
 | `GET /admin/groups/:id` | One group's members + states, unmasked phone (admin-only) |
+| `GET /admin/security-events` | Security audit trail, filterable by severity (admin-only) |
 
 The **scheduler** (`src/api/scheduler.service.ts` + `src/scheduler.ts`) runs
 on an interval: for each active group it settles every hour that has come
@@ -177,6 +178,24 @@ single chokepoint for both join routes), counting the user's `active`
 memberships in live groups — completed, left and dissolved ones free a slot,
 so renewing after a cycle is never blocked. Over the limit returns 409. Set
 `GROUP_JOIN_LIMIT=0` to disable.
+
+## Security audit & alerting (ADR-24)
+
+Prevention isn't enough — rejections are also *recorded*. A global exception
+filter (`src/api/security.filter.ts`) classifies security-relevant HTTP
+rejections (a pure `classifyRejection`) and records them to `security_event`
+via `SecurityService`, which never throws and never blocks the request:
+
+- `auth_failed` (401), `admin_denied` / `ownership_denied` / `callback_rejected`
+  (403, by reason — a forged callback is **critical**), `otp_locked` (429),
+  `join_limit` (409). KYC rejections are logged explicitly from the review
+  handler. Benign rejections (404, validation, "verify to continue") are ignored.
+- **Alerting:** a `critical` event alerts immediately; `SECURITY_ALERT_THRESHOLD`
+  repeats of a counted type from one IP/phone within `SECURITY_ALERT_WINDOW_MS`
+  escalate to a `critical` `anomaly_threshold` event and alert. The `AlertSink`
+  is Fake (tests) / Log (default) / Webhook (`ALERT_WEBHOOK_URL`, e.g. Slack).
+- **Ops surface:** `GET /admin/security-events?limit=&severity=` (admin-only)
+  feeds the console's Security tab. Events never store tokens or secrets.
 
 ## Gates & CI
 

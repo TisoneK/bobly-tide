@@ -110,6 +110,36 @@ class PendingVerification {
       );
 }
 
+/// A security audit event in the ops console (GET /admin/security-events).
+class SecurityEvent {
+  final String id;
+  final String type;
+  final String severity; // info | warning | critical
+  final String? phone;
+  final String? ip;
+  final String? detail;
+  final String createdAt;
+  const SecurityEvent({
+    required this.id,
+    required this.type,
+    required this.severity,
+    required this.phone,
+    required this.ip,
+    required this.detail,
+    required this.createdAt,
+  });
+
+  factory SecurityEvent.fromJson(Map<String, dynamic> j) => SecurityEvent(
+        id: j['id'] as String,
+        type: j['type'] as String,
+        severity: j['severity'] as String,
+        phone: j['phone'] as String?,
+        ip: j['ip'] as String?,
+        detail: j['detail'] as String?,
+        createdAt: j['createdAt'] as String,
+      );
+}
+
 /// A group summary row in the ops console (GET /admin/groups).
 class AdminGroupSummary {
   final String id;

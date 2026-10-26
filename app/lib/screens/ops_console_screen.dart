@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_groups_screen.dart';
 import 'admin_kyc_screen.dart';
+import 'admin_security_screen.dart';
 
 /// The ops console (admins only on the backend, AdminGuard). Two tabs: KYC
 /// review and group/member oversight. A non-admin can open it but each tab
@@ -12,14 +13,16 @@ class OpsConsoleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Ops console'),
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
               Tab(text: 'Verifications'),
               Tab(text: 'Groups'),
+              Tab(text: 'Security'),
             ],
           ),
         ),
@@ -27,6 +30,7 @@ class OpsConsoleScreen extends StatelessWidget {
           children: [
             KycReviewTab(),
             GroupsTab(),
+            SecurityTab(),
           ],
         ),
       ),

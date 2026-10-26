@@ -103,6 +103,13 @@ class ApiClient {
   Future<AdminGroupDetail> adminGroupDetail(String id) async =>
       AdminGroupDetail.fromJson(await _get('/admin/groups/$id'));
 
+  /// The security audit trail (optionally filtered to [severity] and above).
+  Future<List<SecurityEvent>> adminSecurityEvents({int limit = 100, String? severity}) async {
+    final q = severity != null ? '?limit=$limit&severity=$severity' : '?limit=$limit';
+    final list = await _getList('/admin/security-events$q');
+    return list.map((e) => SecurityEvent.fromJson(e as Map<String, dynamic>)).toList(growable: false);
+  }
+
   // --- plumbing ---
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final res = await _http.post(Uri.parse('$baseUrl$path'), headers: _headers, body: jsonEncode(body));
