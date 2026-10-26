@@ -13,8 +13,9 @@ dependencies:
   flutter_riverpod: ^2.5.1
   http: ^1.2.2
   # On-device KYC: Smile ID runs the selfie/ID capture + liveness and uploads
-  # straight to the vendor (ADR-19). Confirm the exact published version with
-  # `flutter pub add smile_id` on a machine with the SDK before building.
+  # straight to the vendor (ADR-19). Version verified against pub.dev on
+  # 2026-10-26: `^10.0.0` resolves to 10.4.3 (11.2.14 is the latest major; a
+  # bump needs a deliberate migration of the widget API, not a constraint edit).
   smile_id: ^10.0.0
 
 dev_dependencies:

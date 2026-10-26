@@ -5,17 +5,21 @@ join + queue, group/turn view, and wallet + receipts — against the
 [`backend/`](../backend) API. Flutter + Riverpod, deep-sea-blue theme
 (build spec §9, ADR-3).
 
-> **Not built/compiled in this environment** — no Flutter SDK was available,
-> so this is authored source, not a verified build. Generate the platform
-> folders and run it on a machine with Flutter (see below).
+> **Compiled and tested on Windows** (2026-10-26, Flutter 3.47.8 / Dart 3.13.7):
+> `flutter analyze` reports 0 errors (13 info-level lints), `flutter test` passes
+> 8/8, and `android/` + `ios/` platform folders are generated. Still unverified:
+> running on a device/emulator (no Android SDK here) and the Smile ID KYC flow
+> (see "Known gaps" below).
+>
+> Prerequisites: Flutter >= 3.22 (`flutter --version`), then `flutter pub get`.
 
 ## Run
 
 ```bash
 cd app
-flutter create .            # generate android/ ios/ platform folders (first time)
 flutter pub get
 flutter test                # unit tests (models, formatting)
+flutter analyze             # 0 errors expected; 13 info-level lints remain
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000   # Android emulator → host
 ```
 
@@ -87,10 +91,15 @@ lib/widgets/             formatting + shared UI helpers
 
 - The session token is kept in memory only — add secure storage so it
   survives app restarts.
+- **KYC job ownership is unresolved.** The pinned `smile_id` 10.4.3 widget API
+  takes `userId`/`jobId` but cannot consume the server-signed job authorization
+  our backend issues (partnerId/timestamp/signature/product, ADR-19), so the
+  SDK creates its own job and the vendor callback's `job_id` will not match the
+  `kyc_job` row. Options: `extraPartnerParams` + `skipApiSubmission`, or move job
+  ownership to the SDK and map its returned jobId. Needs a device + sandbox
+  credentials; see `lib/kyc/smile_kyc.dart`.
 - KYC ID/face capture runs through the **Smile ID SDK** (`lib/kyc/smile_kyc.dart`),
-  but the app is uncompiled here: the `smile_id` version is a placeholder and
-  the SDK call site is written to the published API — both need confirming on a
-  machine with Flutter + the package. Proof-of-address is still a plain
-  reference submit (not a Smile product).
+  but the `smile_id` call sites are compile-verified only (not run on a device).
+  Proof-of-address is still a plain reference submit (not a Smile product).
 - No push/SMS notifications, no switch-package UI, no offline cache — out of
   scope for the pilot slice (build spec §2.2). (Renew/leave are wired.)

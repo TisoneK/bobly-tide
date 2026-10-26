@@ -54,7 +54,7 @@ ThemeData boblyTheme() {
       filled: true,
       fillColor: BoblyColors.surface,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: BoblyColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
