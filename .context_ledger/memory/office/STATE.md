@@ -5,7 +5,7 @@ at check-in and at exit. This is a DERIVED VIEW for fast orientation;
 open the file a line points at when your task needs more than the
 line gives you. Full reading order: ledger-schema.md. -->
 
-_Regenerated: 2026-10-26T07:18:13Z_
+_Regenerated: 2026-10-26T07:38:24Z_
 
 ## Standing params
 - **Core:** 2.2.0 (locked, verified 2026-10-26)
@@ -16,6 +16,7 @@ _Regenerated: 2026-10-26T07:18:13Z_
 
 ## Office — who's in, right now
 - **Mara** (S002) — Working — Security audit log + admin alerting (ADR-24): global filter records rejections, threshold…
+- **Kofi** (S004) — Working — Continuation: clear the three backlog items (Smile ID job ownership, Android SDK, analyze…
 
 ## Current task
 - **2026-10-26 — Kofi (S003) / deepseek-flash (DSH)** — Local onboarding of this Windows machine — pull latest `main` (through 3d27f35, ADRs 21–24), install backend dependencies, install Flutter … — *done — backend `npm ci` + typecheck + 110/110 tests green; project gate (`sh backend/scripts/gate.sh full`) green; Flutter 3.47.8 installed at `Divers\flutter`; `flutter pub get` resolved smile_id 10.4.3; 4 compile errors fixed (Smile ID 10.x widget API, CardThemeData); `flutter analyze` 0 errors (13 info lints), `flutter test` 8/8, `flutter build web` OK; project-local Postgres 18 cluster (`Divers\pgdata`, :5433) + migrations + API smoke test (OTP → KYC → join → wallet) all verified. Open follow-ups in `tasks/backlog.md`.*
