@@ -2,7 +2,7 @@
 # Do not edit by hand. If core fails verify, `ledger-sync rollback`
 # restores the version recorded here from git history.
 version=2.2.0
-verified=2026-10-24
+verified=2026-10-26
 source_kind=upstream
 source_state=in-sync
 source_url=https://github.com/TisoneK/context-ledger.git
