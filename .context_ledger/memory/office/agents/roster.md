@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Fill-rate estimated start time on the queue (ADR-21): estimateStartAt + group-view field + client banner | Working | Backend done, 88 tests green (6 new) + typecheck clean; Flutter authored, uncompiled |
+| Mara | S002 | claude-opus-4-8 | Daraja callback source validation (ADR-22): URL secret + IP allowlist on the public callbacks | Working | Backend done, 98 tests green (10 new) + typecheck clean |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
