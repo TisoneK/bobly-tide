@@ -30,6 +30,20 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000   # Android emulator
 Point `API_BASE_URL` at the backend. An Android emulator reaches the host
 machine at `10.0.2.2`; an iOS simulator at `localhost`.
 
+### Android build notes (verified 2026-10-26)
+
+`flutter build apk --debug` succeeds with **JDK 21** (`flutter config --jdk-dir …`;
+Gradle 9.3.1 rejects JDK 27). Two workarounds live in `android/build.gradle.kts`
+because of the pinned `smile_id` 10.4.3 plugin:
+
+- its AndroidX/Compose dependencies are declared **without versions**, so the
+  root Gradle pins them (`resolutionStrategy.force`);
+- its ML Kit object-detection pulls LiteRT 1.0.1, which ships `litert-support`
+  and `litert-support-api` with the same manifest namespace — the root Gradle
+  excludes the duplicate `-api` artifact.
+
+Both should be revisited on a `smile_id` upgrade.
+
 ### KYC capture — Smile ID SDK (ADR-19)
 
 The ID/face steps run on-device through the **Smile ID Flutter SDK**
