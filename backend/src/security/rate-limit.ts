@@ -1,4 +1,4 @@
-// General request rate limiting (ADR-25) — a defence against floods and
+// General request rate limiting (ADR-26) — a defence against floods and
 // brute force that complements the audit log (ADR-24). Pure, in-memory,
 // fixed-window counters keyed per rule+subject; a single-instance pilot
 // doesn't need a shared store (noted as a follow-up for horizontal scale).

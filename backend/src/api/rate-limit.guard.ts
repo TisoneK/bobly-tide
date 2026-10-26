@@ -30,7 +30,7 @@ interface RequestLike {
 
 /**
  * Global guard that throttles the sensitive routes in DEFAULT_RATE_RULES
- * (ADR-25). Runs before the auth guard, so an unauthenticated flood is
+ * (ADR-26). Runs before the auth guard, so an unauthenticated flood is
  * stopped early. Over the limit → 429 "rate limit exceeded", which the
  * security filter (ADR-24) records as a `rate_limited` event. Unlisted routes
  * and the disabled config pass straight through.

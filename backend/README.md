@@ -221,7 +221,7 @@ via `SecurityService`, which never throws and never blocks the request:
 - **Ops surface:** `GET /admin/security-events?limit=&severity=` (admin-only)
   feeds the console's Security tab. Events never store tokens or secrets.
 
-## Rate limiting (ADR-25)
+## Rate limiting (ADR-26)
 
 A global `RateLimitGuard` (runs before auth) throttles sensitive routes with
 in-memory fixed-window counters (`src/security/rate-limit.ts`): OTP
