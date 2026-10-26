@@ -52,7 +52,7 @@ is your stable session tag.
 
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
-| Mara | S002 | claude-opus-4-8 | Per-user concurrent group-join limit (ADR-20, §8.5): cap in createMembershipForUser, GROUP_JOIN_LIMIT | Working | Backend done, 82 tests green (4 new) + typecheck clean |
+| Mara | S002 | claude-opus-4-8 | Fill-rate estimated start time on the queue (ADR-21): estimateStartAt + group-view field + client banner | Working | Backend done, 88 tests green (6 new) + typecheck clean; Flutter authored, uncompiled |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,
