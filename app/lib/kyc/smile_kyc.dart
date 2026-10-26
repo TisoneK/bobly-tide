@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:smile_id/smile_id.dart';
 import 'package:smile_id/smile_id_document_verification.dart';
@@ -28,8 +29,29 @@ import '../models.dart';
 
 typedef SmileDone = void Function(bool success, String? error);
 
+/// The Smile ID capture widgets are Android/iOS only. Web and desktop builds
+/// (dev previews) still compile the app, but KYC capture is unavailable there —
+/// the vendor SDK has no implementation for those platforms, so calling into it
+/// would throw a MissingPluginException at startup.
+bool get smileKycSupported =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
+
 /// Build the full-screen Smile ID capture flow for this KYC job.
 Widget smileKycFlow({required KycUploadAuth auth, required SmileDone onDone}) {
+  if (!smileKycSupported) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          'Identity capture runs in the Android or iOS app. '
+          'This build is a desktop/web preview.',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
   switch (auth.kind) {
     case 'face':
       // Selfie + liveness (SmartSelfie enrollment).

@@ -43,8 +43,8 @@ test/                  money / engine / holds / defaults / pg / api / scheduler 
 ## Run
 
 ```bash
-npm install
-npm test          # full suite (55 tests, incl. Postgres via in-process pg-mem)
+npm install       # or `npm ci` from backend/package-lock.json
+npm test          # full suite (110 tests, incl. Postgres via in-process pg-mem)
 npm run typecheck
 npm run demo      # settle one full Daily cycle and print balances
 ```
@@ -55,6 +55,30 @@ Against a real database:
 DATABASE_URL=postgres://user:pass@host:5432/bobly npm run migrate
 DATABASE_URL=postgres://user:pass@host:5432/bobly npm start   # API on :3000
 ```
+
+The server reads plain environment variables — there is **no dotenv loader**,
+so export the values (or source `.env` in your shell) before `npm start`.
+`npm test` needs no database at all: it runs against in-process `pg-mem`.
+
+### Windows dev machine (verified 2026-10-26)
+
+A project-local PostgreSQL 18 cluster lives at
+`C:\Users\Lameck\Tisone\Divers\pgdata` on **port 5433** (trust auth on
+127.0.0.1, separate from the system service on 5432). The helper
+`C:\Users\Lameck\Tisone\Divers\bobly-dev.ps1` starts it, loads
+`backend\.env`, and runs the API:
+
+```powershell
+& C:\Users\Lameck\Tisone\Divers\bobly-dev.ps1 api       # cluster + .env + npm start
+& C:\Users\Lameck\Tisone\Divers\bobly-dev.ps1 migrate   # same, but npm run migrate
+& C:\Users\Lameck\Tisone\Divers\bobly-dev.ps1 db-status # is the cluster up?
+```
+
+`.env` there is gitignored and generated per machine; it is **not** loaded
+automatically, which is why the helper exists. For a quick join-flow test
+locally it sets `KYC_AUTO_APPROVE=true` and omits `email` from
+`VERIFICATION_REQUIRED` (the local `LogEmailSender` deliberately does not log
+the code it sends).
 
 ## Database
 

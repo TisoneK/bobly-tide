@@ -12,6 +12,10 @@ join + queue, group/turn view, and wallet + receipts — against the
 > (see "Known gaps" below).
 >
 > Prerequisites: Flutter >= 3.22 (`flutter --version`), then `flutter pub get`.
+> Platform targets generated: **android, ios, web, windows**. `flutter build web`
+> succeeds, so a quick UI preview needs no Android SDK:
+> `flutter run -d chrome` (KYC capture itself is Android/iOS-only and shows a
+> notice on desktop/web).
 
 ## Run
 

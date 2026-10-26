@@ -4,11 +4,16 @@ import 'package:smile_id/smile_id.dart';
 
 import 'app.dart';
 import 'config.dart';
+import 'kyc/smile_kyc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize the Smile ID KYC SDK once, up front (ADR-19). Per-job auth is
-  // issued by the backend at /verification/kyc/authorize.
-  SmileID.initialize(useSandbox: smileSandbox);
+  // issued by the backend at /verification/kyc/authorize. The SDK ships only
+  // for Android/iOS, so desktop and web previews skip it (and the KYC screen
+  // shows a "mobile app only" notice instead of crashing).
+  if (smileKycSupported) {
+    SmileID.initialize(useSandbox: smileSandbox);
+  }
   runApp(const ProviderScope(child: BoblyApp()));
 }
