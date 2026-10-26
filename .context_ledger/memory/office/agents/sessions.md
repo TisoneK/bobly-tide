@@ -52,3 +52,13 @@ re-seeded into the new office explicitly, and nothing else carries over.
 - **Open items:** `tasks/backlog.md` — B-2026-10-26-2 only (device KYC round-trip needs `smile_config.json`/`SmileIDConfig.plist` + sandbox credentials; not possible on this machine)
 - **Notes:** none
 - **Report:** none (summary + screenshots delivered in chat)
+
+---
+## 2026-10-24 — Session 2
+- **Agent:** Mara | **Model:** claude-opus-4-8 | **Platform:** Baos-Mac-mini (local macOS 15.7.7) | **Role:** engineer | **Core:** 2.2.0
+- **Task:** Fill the spec/build-spec gaps, then build and harden the closed-pilot — backend money ledger + settlement engine, NestJS API + scheduler, M-Pesa Daraja, phone/OTP auth, KYC tiers, the Flutter member client and pilot screens, then the security hardening series.
+- **Commits:** 53 (4dc856d..4504bf8)
+- **Outcome:** done — ADR-11..24 and ADR-26 (ADR-25 was S004): member-journey hardening, KYC tiers + FCFS turn order, pilot screens, admin/ops role + ops console (KYC review + group oversight + security tab), Smile ID vendor + camera-first capture, per-user join limit, fill-rate estimated start, Daraja callback source validation, security audit log + admin alerting, and general rate limiting. 119 backend tests green, typecheck clean.
+- **Open items:** live Daraja + Smile sandbox round-trips (need real credentials); (future) product spec §8.5 account-behaviour flags + a shared-store (Redis) rate limiter for scale-out; 13 GitHub Dependabot advisories on the repo (prod audit is clean — likely dev/toolchain).
+- **Notes:** Session entry logged late, at clock-out — the shift ran 2026-10-24→26 (local macOS), interleaved over real time with S003/S004 on a Windows machine. Before the final push I rebased S002's two rate-limiting commits onto S004's ADR-25 + platform build and renumbered my rate-limiting ADR 25→26 to resolve the collision. Protocol miss this session: the sessions.md entry was not written at the time and the roster heartbeat went stale (flagged in S003's note).
+- **Report:** none (summaries delivered in chat).
