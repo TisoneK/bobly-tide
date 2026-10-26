@@ -12,6 +12,6 @@ entry and backlog before starting.
 - **Status:** in-progress | done | blocked (<blocker>)
 -->
 
-- **Session:** 2026-10-26 — Kofi (S003) / deepseek-flash (DSH)
-- **Task:** Local onboarding of this Windows machine — pull latest `main` (through 3d27f35, ADRs 21–24), install backend dependencies, install Flutter 3.47.8, generate app platform folders (android/ios/web/windows), and verify the whole stack builds and runs.
-- **Status:** done — backend `npm ci` + typecheck + 110/110 tests green; project gate (`sh backend/scripts/gate.sh full`) green; Flutter 3.47.8 installed at `Divers\flutter`; `flutter pub get` resolved smile_id 10.4.3; 4 compile errors fixed (Smile ID 10.x widget API, CardThemeData); `flutter analyze` 0 errors (13 info lints), `flutter test` 8/8, `flutter build web` OK; project-local Postgres 18 cluster (`Divers\pgdata`, :5433) + migrations + API smoke test (OTP → KYC → join → wallet) all verified. Open follow-ups in `tasks/backlog.md`.
+- **Session:** 2026-10-26 — Kofi (S004) / deepseek-flash (DSH)
+- **Task:** Clear the S003 handoff backlog — Smile ID KYC job ownership (ADR-25), Android SDK + APK build, analyzer lints — and get the app running on this Windows machine.
+- **Status:** done — ADR-25 shipped (SDK-owned jobs + `POST /verification/kyc/attach`, 111 backend tests green); `flutter analyze` clean; Android SDK 36 + JDK 21 installed, `flutter doctor` green, `flutter build apk --debug` succeeds; app built and run on Windows end-to-end (OTP sign-in → Daily home → join → group), verified against the live API + Postgres. One open backlog row remains (device KYC round-trip; needs vendor config + credentials).

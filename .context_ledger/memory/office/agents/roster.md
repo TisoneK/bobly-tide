@@ -53,7 +53,6 @@ is your stable session tag.
 | Name | Codename | Model | Doing | Status | Status detail |
 |------|----------|-------|-------|--------|---------------|
 | Mara | S002 | claude-opus-4-8 | Security audit log + admin alerting (ADR-24): global filter records rejections, threshold→alert, ops Security tab | Working | Backend done, 110 tests green (16 new) + typecheck clean; Flutter authored, uncompiled |
-| Kofi | S004 | deepseek-flash | Continuation: clear the three backlog items (Smile ID job ownership, Android SDK, analyzer lints) and run the app on this machine | Working | Phase 2 check-in; synced at e8256db |
 
 **Keep your Status cells current — that is what the board is for.** The
 next live worker reads it to know at a glance what a peer has finished,

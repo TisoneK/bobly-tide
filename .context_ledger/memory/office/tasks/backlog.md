@@ -64,19 +64,17 @@ Full spec: `.context_ledger/core/schemas/ledger-schema.md` →
 
 | ID | Summary |
 |----|---------|
-| B-2026-10-26-1 | Resolve Smile ID KYC job ownership vs ADR-19: the pinned 10.4.3 widget API can't take our server-signed job, so vendor job_id won't match kyc_job — pick `extraPartnerParams`+`skipApiSubmission` or SDK-owned jobs, then device-test (see app/lib/kyc/smile_kyc.dart, app/README.md "Known gaps") |
 
 ### Medium Priority
 
 | ID | Summary |
 |----|---------|
-| B-2026-10-26-2 | Install Android SDK + accept-licenses (Android Studio or cmdline-tools) so `flutter run`/`flutter build apk` is verified on this machine; `flutter doctor` flags it today |
+| B-2026-10-26-2 | Verify the KYC round-trip on a real device: bundle smile_config.json / SmileIDConfig.plist + sandbox credentials, run the capture flow, confirm the vendor callback resolves the attached job id |
 
 ### Low Priority
 
 | ID | Summary |
 |----|---------|
-| B-2026-10-26-3 | Clear the 13 info-level `flutter analyze` lints in app/ (withOpacity → withValues, dangling library doc comment in models.dart, const hints, BuildContext-across-async-gap in verification_screen.dart) |
 
 <!-- TEMPLATE — add one ACTIONABLE row to the matching priority table
      (a finding, question, or someday idea goes in parking-lot.md instead):

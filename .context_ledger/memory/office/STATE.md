@@ -5,7 +5,7 @@ at check-in and at exit. This is a DERIVED VIEW for fast orientation;
 open the file a line points at when your task needs more than the
 line gives you. Full reading order: ledger-schema.md. -->
 
-_Regenerated: 2026-10-26T07:38:24Z_
+_Regenerated: 2026-10-26T08:21:39Z_
 
 ## Standing params
 - **Core:** 2.2.0 (locked, verified 2026-10-26)
@@ -16,20 +16,19 @@ _Regenerated: 2026-10-26T07:38:24Z_
 
 ## Office — who's in, right now
 - **Mara** (S002) — Working — Security audit log + admin alerting (ADR-24): global filter records rejections, threshold…
-- **Kofi** (S004) — Working — Continuation: clear the three backlog items (Smile ID job ownership, Android SDK, analyze…
 
 ## Current task
-- **2026-10-26 — Kofi (S003) / deepseek-flash (DSH)** — Local onboarding of this Windows machine — pull latest `main` (through 3d27f35, ADRs 21–24), install backend dependencies, install Flutter … — *done — backend `npm ci` + typecheck + 110/110 tests green; project gate (`sh backend/scripts/gate.sh full`) green; Flutter 3.47.8 installed at `Divers\flutter`; `flutter pub get` resolved smile_id 10.4.3; 4 compile errors fixed (Smile ID 10.x widget API, CardThemeData); `flutter analyze` 0 errors (13 info lints), `flutter test` 8/8, `flutter build web` OK; project-local Postgres 18 cluster (`Divers\pgdata`, :5433) + migrations + API smoke test (OTP → KYC → join → wallet) all verified. Open follow-ups in `tasks/backlog.md`.*
+- **2026-10-26 — Kofi (S004) / deepseek-flash (DSH)** — Clear the S003 handoff backlog — Smile ID KYC job ownership (ADR-25), Android SDK + APK build, analyzer lints — and get the app running on … — *done — ADR-25 shipped (SDK-owned jobs + `POST /verification/kyc/attach`, 111 backend tests green); `flutter analyze` clean; Android SDK 36 + JDK 21 installed, `flutter doctor` green, `flutter build apk --debug` succeeds; app built and run on Windows end-to-end (OTP sign-in → Daily home → join → group), verified against the live API + Postgres. One open backlog row remains (device KYC round-trip; needs vendor config + credentials).*
 
 ## Backlog — High priority (the top of the queue)
-| B-2026-10-26-1 | Resolve Smile ID KYC job ownership vs ADR-19: the pinned 10.4.3 widget API can't take our server-signed job, so vendor job_id won't match kyc_job — pick `extraPartnerParams`+`skipApiSubmission` or SDK-owned jobs, then device-test (see app/lib/kyc/smile_kyc.dart, app/README.md "Known gaps") |
+(none)
 
-_1 medium, 1 low priority row(s) — see tasks/backlog.md_
+_1 medium, 0 low priority row(s) — see tasks/backlog.md_
 
 ## Logs at a glance — open only if your task touches these
 - flaws/log.md (protocol/.context_ledger friction): 0 entries
 - inefficiencies/log.md (project code/env friction): 0 entries
-- plans/decisions.md (ADRs in force — respected, not relitigated): 24 entries, last added 2026-10-25
+- plans/decisions.md (ADRs in force — respected, not relitigated): 25 entries, last added 2026-10-26
 
 ## Collaboration
 (no collaboration/events — collaboration never used)

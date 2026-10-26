@@ -42,3 +42,13 @@ re-seeded into the new office explicitly, and nothing else carries over.
 - **Open items:** `tasks/backlog.md` — B-2026-10-26-1 (Smile ID job ownership vs ADR-19, High), B-2026-10-26-2 (Android SDK), B-2026-10-26-3 (13 analyzer lints)
 - **Notes:** none
 - **Report:** none (install session; summary delivered in chat). Session 2 (Mara, S002) ended without a session entry — its work is in the commits/log; her roster row was left behind and is noted below.
+
+---
+## 2026-10-26 — Session 4
+- **Agent:** Kofi | **Model:** deepseek-flash | **Platform:** DESKTOP-3LRR8MD (local Windows 11) | **Role:** engineer | **Core:** 2.2.0
+- **Task:** Clear the S003 handoff backlog — Smile ID KYC job ownership, Android SDK + APK build, analyzer lints — and get the app running on this machine.
+- **Commits:** 5 (273030d..c6cde0e) + this clock-out
+- **Outcome:** done — ADR-25: the SDK owns the KYC job and the app reports its id to `POST /verification/kyc/attach` (backend service + endpoint + 1 test, 111 tests green); `flutter analyze` clean (all 13 lints cleared); Android SDK 36 installed + licenses accepted, `flutter doctor` fully green, `flutter build apk --debug` succeeds (JDK 21 + two smile_id/Gradle workarounds); app built for Windows and **run end-to-end** — signed in with an OTP and joined the Daily group against the live API + Postgres (screenshots in `C:\Users\Lameck\Tisone\Divers\bobly-screenshots`).
+- **Open items:** `tasks/backlog.md` — B-2026-10-26-2 only (device KYC round-trip needs `smile_config.json`/`SmileIDConfig.plist` + sandbox credentials; not possible on this machine)
+- **Notes:** none
+- **Report:** none (summary + screenshots delivered in chat)
