@@ -186,6 +186,12 @@ afterwards). The group activates when everyone has secured; the engine pays
 `turn_position` p at hour p−1. `GET /groups/:id` returns `yourTurnAt`
 (`start_at + (position−1) hours`) so the client can count down to your turn.
 
+While a group is still filling, the view also carries `estimatedStartAt`
+(ADR-21): a fill-rate projection of when it will activate — from the securing
+interarrival rate once ≥2 have secured, else the join pace since the group
+opened (`src/domain/fill-estimate.ts`). It's a rough "~" estimate the client
+labels as such, and is null until there's a basis.
+
 ## M-Pesa (Daraja) — build spec §7
 
 The wallet is the source of truth and moves **only on the confirming

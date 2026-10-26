@@ -1,6 +1,7 @@
 import { ConflictException, Controller, ForbiddenException, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import type { SessionClaims } from '../auth/auth.service';
 import { processDefault } from '../domain/defaults';
+import { estimateStartAt } from '../domain/fill-estimate';
 import { fundHold } from '../domain/holds';
 import type { Group, Membership, Package } from '../domain/types';
 import { accountIdsForGroup, withLedger } from '../pg-settlement';
@@ -170,10 +171,28 @@ export class GroupsController {
         ).toISOString();
       }
 
+      // While filling, a fill-rate estimate of when the group will activate
+      // (ADR-21) — a rough "~" projection, null until there's a basis.
+      let estimatedStartAt: string | null = null;
+      if (loaded.group.state === 'filling') {
+        const stats = await this.store.fillStats(id);
+        if (stats) {
+          const eta = estimateStartAt({
+            size: this.pkg.size,
+            securedAt: stats.securedAt,
+            joined: loaded.memberships.length,
+            groupCreatedAt: stats.createdAt,
+            now: new Date(),
+          });
+          estimatedStartAt = eta?.toISOString() ?? null;
+        }
+      }
+
       return {
         id: loaded.group.id,
         state: loaded.group.state,
         startAt: loaded.startAt?.toISOString() ?? null,
+        estimatedStartAt,
         size: this.pkg.size,
         joined: loaded.memberships.length,
         securedCount,

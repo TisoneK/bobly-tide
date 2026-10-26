@@ -301,12 +301,44 @@ class _StateBanner extends StatelessWidget {
               const SizedBox(height: 4),
               const Text('Your group starts once everyone has secured their spot.',
                   style: TextStyle(color: BoblyColors.slate)),
+              if (group.estimatedStartAt != null) ...[
+                const SizedBox(height: 8),
+                _estimateLine(group.estimatedStartAt!),
+              ],
             ],
           ),
         ),
       );
     }
 
+    return _otherStateCard();
+  }
+
+  /// A rough, fill-rate-based "estimated start" line (ADR-21) — never a promise.
+  Widget _estimateLine(String iso) {
+    final at = DateTime.tryParse(iso);
+    if (at == null) return const SizedBox.shrink();
+    final d = at.difference(DateTime.now());
+    final text = d.inMinutes < 1 ? 'any moment now' : '~${_rough(d)} (estimate)';
+    return Row(
+      children: [
+        const Icon(Icons.schedule, size: 15, color: BoblyColors.slate),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text('Estimated start $text',
+              style: const TextStyle(color: BoblyColors.slate, fontSize: 13)),
+        ),
+      ],
+    );
+  }
+
+  static String _rough(Duration d) {
+    if (d.inDays >= 1) return '${d.inDays}d ${d.inHours % 24}h';
+    if (d.inHours >= 1) return '${d.inHours}h ${d.inMinutes % 60}m';
+    return '${d.inMinutes}m';
+  }
+
+  Widget _otherStateCard() {
     final (label, color) = switch (group.state) {
       'active' => ('Live — turns are running', BoblyColors.success),
       'completed' => ('Cycle complete', BoblyColors.slate),

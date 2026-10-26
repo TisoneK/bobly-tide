@@ -161,6 +161,7 @@ class GroupView {
   final int? yourPosition; // turn position, null until secured
   final bool yourSecured;
   final String? yourTurnAt; // ISO time your turn begins (countdown target)
+  final String? estimatedStartAt; // ISO rough estimate of activation (filling only)
   final String yourBalance;
   final List<GroupMemberView> members;
   const GroupView({
@@ -173,6 +174,7 @@ class GroupView {
     required this.yourPosition,
     required this.yourSecured,
     required this.yourTurnAt,
+    required this.estimatedStartAt,
     required this.yourBalance,
     required this.members,
   });
@@ -192,6 +194,7 @@ class GroupView {
         yourPosition: (j['yourPosition'] as num?)?.toInt(),
         yourSecured: j['yourSecured'] as bool? ?? false,
         yourTurnAt: j['yourTurnAt'] as String?,
+        estimatedStartAt: j['estimatedStartAt'] as String?,
         yourBalance: j['yourBalance'].toString(),
         members: ((j['members'] as List?) ?? const [])
             .map((m) => GroupMemberView.fromJson(m as Map<String, dynamic>))

@@ -60,7 +60,9 @@ Tracks the member-app review against the spec. The app lives in
 - [x] Ops KYC-review screen (`admin_kyc_screen.dart`) — lists
   `GET /admin/verifications`, approve/reject via the review endpoint; reached
   from the home menu, shows an "ops only" state for non-admins (403)
-- [ ] Estimated start time on the queue (needs fill-rate data)
+- [x] Estimated start time on the queue — fill-rate projection (ADR-21):
+  backend `estimatedStartAt` on the group view (securing rate, else join pace),
+  shown as a "~" estimate in the filling banner.
 - [x] ID-document & face capture (`kyc_capture_screen.dart` + `kyc/smile_kyc.dart`)
   — on-device **Smile ID SDK** (ADR-19, superseding the ADR-17 image_picker
   stand-in): authorize via `POST /verification/kyc/authorize`, then the SDK
@@ -76,8 +78,8 @@ Tracks the member-app review against the spec. The app lives in
 
 ## Smaller gaps
 
-- [x] Slots-remaining shown on the group/queue screen; [ ] estimated start
-  still needs fill-rate data.
+- [x] Slots-remaining shown on the group/queue screen; [x] estimated start
+  (fill-rate projection, ADR-21).
 - [x] Group-stall handling if a joined member never secures — backend
   scheduler dissolves + refunds filling groups past `FILL_TIMEOUT_MS`
   (ADR-15).

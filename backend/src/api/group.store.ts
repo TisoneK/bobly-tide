@@ -243,6 +243,26 @@ export class GroupStore {
     };
   }
 
+  /** When the group opened + the secure times so far, for the fill-rate
+   *  estimate of when it will activate (ADR-21). Null if the group is absent. */
+  async fillStats(groupId: string): Promise<{ createdAt: Date; securedAt: Date[] } | null> {
+    if (!isUuid(groupId)) return null;
+    const g = await this.pool.query<{ created_at: string | Date }>(
+      'SELECT created_at FROM "group" WHERE id = $1',
+      [groupId],
+    );
+    const row = g.rows[0];
+    if (!row) return null;
+    const sec = await this.pool.query<{ secured_at: string | Date }>(
+      'SELECT secured_at FROM membership WHERE group_id = $1 AND secured_at IS NOT NULL',
+      [groupId],
+    );
+    return {
+      createdAt: new Date(row.created_at),
+      securedAt: sec.rows.map((r) => new Date(r.secured_at)),
+    };
+  }
+
   /** Members of a group with display info (name + masked phone) for the view. */
   async listMemberViews(groupId: string): Promise<MemberView[]> {
     if (!isUuid(groupId)) return [];
