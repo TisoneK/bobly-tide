@@ -32,3 +32,13 @@ re-seeded into the new office explicitly, and nothing else carries over.
 - **Open items:** product build not started — scope lives in `bobly-tide-spec.md` (see §13 Launch plan); no entries queued in `tasks/backlog.md` yet
 - **Notes:** none
 - **Report:** none (setup session; summary delivered in chat)
+
+---
+## 2026-10-26 — Session 3
+- **Agent:** Kofi | **Model:** deepseek-flash | **Platform:** DESKTOP-3LRR8MD (local Windows 11) | **Role:** engineer | **Core:** 2.2.0
+- **Task:** Local onboarding — pull latest `main`, install/initialize the project on this machine (backend deps, Flutter SDK, app platform folders), verify builds/tests.
+- **Commits:** 6 (2365a4b..13087d8)
+- **Outcome:** done — backend `npm ci` + typecheck + 110/110 tests + project gate green; Flutter 3.47.8 installed (`Divers\flutter`), app compile-fixed (Smile ID 10.4.3 widgets, CardThemeData), `flutter analyze` 0 errors, `flutter test` 8/8, `flutter build web` OK; android/ios/web/windows folders generated; project-local Postgres 18 cluster (`Divers\pgdata`:5433) + 6 migrations + API smoke test (OTP → KYC → join → wallet) verified.
+- **Open items:** `tasks/backlog.md` — B-2026-10-26-1 (Smile ID job ownership vs ADR-19, High), B-2026-10-26-2 (Android SDK), B-2026-10-26-3 (13 analyzer lints)
+- **Notes:** none
+- **Report:** none (install session; summary delivered in chat). Session 2 (Mara, S002) ended without a session entry — its work is in the commits/log; her roster row was left behind and is noted below.
