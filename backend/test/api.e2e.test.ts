@@ -81,6 +81,7 @@ describe('HTTP API (e2e)', () => {
           scheduler: { enabled: false, tickMs: 60_000, hourMs: ONE_HOUR_MS, fillTimeoutMs: ONE_HOUR_MS },
           daraja: new FakeDarajaClient(),
           mpesa: { withdrawalMin: Money.of('50') },
+          mpesaCallback: { secret: '', allowedIps: [] },
           auth: { jwtSecret: 'test-secret', otpTtlSec: 300, tokenTtlSec: 3600, maxAttempts: 5 },
           sms,
           email,

@@ -99,6 +99,10 @@ const app = await NestFactory.create(
     },
     daraja: buildDaraja(),
     mpesa: { withdrawalMin: Money.of(env['MPESA_WITHDRAWAL_MIN'] ?? '50') },
+    mpesaCallback: {
+      secret: env['MPESA_CALLBACK_SECRET'] ?? '',
+      allowedIps: (env['MPESA_CALLBACK_IPS'] ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    },
     auth: {
       jwtSecret: jwt,
       otpTtlSec: Number(env['AUTH_OTP_TTL_SEC'] ?? 300),
@@ -122,6 +126,12 @@ const app = await NestFactory.create(
     groupJoinLimit: Number(env['GROUP_JOIN_LIMIT'] ?? 3),
   }),
 );
+
+// Behind a reverse proxy, trust it so `req.ip` reflects the real client
+// (X-Forwarded-For) — required for the Daraja callback IP allowlist to work.
+if (env['TRUST_PROXY'] === 'true') {
+  (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void }).set('trust proxy', true);
+}
 
 const port = Number(env['PORT'] ?? 3000);
 await app.listen(port);

@@ -213,6 +213,15 @@ callback** (ADR-8):
 - **Secrets:** all Daraja credentials come from env (see `.env.example`);
   no secret values live in code. `.env` is gitignored; production secrets
   belong in the deploy platform's store and `.context_ledger/memory/secrets/`.
+- **Callback source validation (ADR-22):** Daraja doesn't sign its callbacks,
+  so the public callback endpoints are guarded two ways
+  (`src/mpesa/callback-guard.ts`): a secret path segment registered in the
+  callback URL (`/mpesa/callbacks/stk/<secret>`, `MPESA_CALLBACK_SECRET`) and
+  an optional source-IP allowlist (`MPESA_CALLBACK_IPS`, IPs or IPv4 CIDRs).
+  A spoofed post missing the secret or from an off-list IP gets 403 and moves
+  no money. Both checks are off when unconfigured (dev / fake), and the
+  tokenless path stays valid then. Behind a proxy set `TRUST_PROXY=true` so the
+  real client IP is used.
 
 ## Auth (phone + OTP, build spec §8)
 
@@ -262,8 +271,9 @@ callback** (ADR-8):
 - The Flutter client runs against this API but is unverified (no SDK here);
   secure-storage for its token.
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against
-  the sandbox, not by the unit suite (which uses the fake); the callback
-  endpoints need Daraja source validation before production.
+  the sandbox, not by the unit suite (which uses the fake). Callback source
+  validation is in place (ADR-22); the live sandbox round-trip still needs
+  running against real credentials.
 - `SmileIdKycProvider` is written to the Smile ID v2 spec and unit-tested for
   signature + result mapping, but not yet run against the sandbox; the Flutter
   client still needs the on-device Smile ID SDK (it captures with `image_picker`

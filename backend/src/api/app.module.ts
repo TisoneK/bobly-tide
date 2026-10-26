@@ -4,6 +4,7 @@ import { AuthService, type AuthConfig } from '../auth/auth.service';
 import { AuthStore } from '../auth/auth.store';
 import type { SmsSender } from '../auth/sms';
 import type { Package } from '../domain/types';
+import type { CallbackSourceConfig } from '../mpesa/callback-guard';
 import type { DarajaClient } from '../mpesa/daraja';
 import { MpesaService, type MpesaConfig } from '../mpesa/mpesa.service';
 import { MpesaStore } from '../mpesa/mpesa.store';
@@ -31,6 +32,7 @@ import {
   GROUP_STORE,
   KYC_PROVIDER,
   LEDGER_REPO,
+  MPESA_CALLBACK_CONFIG,
   MPESA_CONFIG,
   MPESA_SERVICE,
   MPESA_STORE,
@@ -52,6 +54,8 @@ export interface AppModuleOptions {
   scheduler: SchedulerConfig;
   daraja: DarajaClient;
   mpesa: MpesaConfig;
+  /** Source validation for Daraja callbacks (ADR-22). */
+  mpesaCallback: CallbackSourceConfig;
   auth: AuthConfig;
   sms: SmsSender;
   email: EmailSender;
@@ -83,6 +87,7 @@ export class AppModule {
         { provide: SCHEDULER_CONFIG, useValue: opts.scheduler },
         { provide: DARAJA_CLIENT, useValue: opts.daraja },
         { provide: MPESA_CONFIG, useValue: opts.mpesa },
+        { provide: MPESA_CALLBACK_CONFIG, useValue: opts.mpesaCallback },
         { provide: AUTH_CONFIG, useValue: opts.auth },
         { provide: SMS_SENDER, useValue: opts.sms },
         { provide: EMAIL_SENDER, useValue: opts.email },
