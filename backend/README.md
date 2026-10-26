@@ -221,6 +221,18 @@ via `SecurityService`, which never throws and never blocks the request:
 - **Ops surface:** `GET /admin/security-events?limit=&severity=` (admin-only)
   feeds the console's Security tab. Events never store tokens or secrets.
 
+## Rate limiting (ADR-25)
+
+A global `RateLimitGuard` (runs before auth) throttles sensitive routes with
+in-memory fixed-window counters (`src/security/rate-limit.ts`): OTP
+request/verify **keyed by phone** (so one account can't be hammered and a
+shared NAT IP isn't collectively locked out), and email-code request, KYC
+authorize, and wallet top-up/withdraw **keyed by IP**. Over the limit → `429
+"rate limit exceeded"`, which the security filter records as a `rate_limited`
+event (and a burst escalates to an alert, ADR-24). Unlisted routes aren't
+limited; `RATE_LIMIT_ENABLED=false` turns it off. Limits live in code, not
+env. (Single-instance only — a shared store is the follow-up for scale-out.)
+
 ## Gates & CI
 
 `backend/scripts/gate.sh` wires the suite into the ledger gates

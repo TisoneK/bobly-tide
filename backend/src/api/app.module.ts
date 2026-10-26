@@ -1,5 +1,5 @@
 import { Module, type DynamicModule } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import type { Pool } from 'pg';
 import { AuthService, type AuthConfig } from '../auth/auth.service';
 import { AuthStore } from '../auth/auth.store';
@@ -11,6 +11,7 @@ import { MpesaService, type MpesaConfig } from '../mpesa/mpesa.service';
 import { MpesaStore } from '../mpesa/mpesa.store';
 import { PgLedgerRepo } from '../repo/pg';
 import type { AlertSink } from '../security/alert';
+import { FixedWindowLimiter } from '../security/rate-limit';
 import { SecurityService, type SecurityConfig } from '../security/security.service';
 import { SecurityStore } from '../security/security.store';
 import type { EmailSender, KycProvider } from '../verification/providers';
@@ -26,10 +27,13 @@ import { KycCallbackController } from './kyc-callback.controller';
 import { MpesaController } from './mpesa.controller';
 import { PackagesController } from './packages.controller';
 import { SchedulerService } from './scheduler.service';
+import { RateLimitGuard, type RateLimitConfig } from './rate-limit.guard';
 import { SecurityEventFilter } from './security.filter';
 import {
   ADMIN_CONFIG,
   ALERT_SINK,
+  RATE_LIMITER,
+  RATE_LIMIT_CONFIG,
   AUTH_CONFIG,
   AUTH_SERVICE,
   AUTH_STORE,
@@ -76,6 +80,8 @@ export interface AppModuleOptions {
   /** Security audit + alerting (ADR-24). */
   alert: AlertSink;
   security: SecurityConfig;
+  /** Request rate limiting (ADR-25). */
+  rateLimit: RateLimitConfig;
 }
 
 @Module({})
@@ -116,6 +122,9 @@ export class AppModule {
           inject: [SECURITY_STORE, ALERT_SINK, SECURITY_CONFIG],
         },
         { provide: APP_FILTER, useClass: SecurityEventFilter },
+        { provide: RATE_LIMITER, useValue: new FixedWindowLimiter() },
+        { provide: RATE_LIMIT_CONFIG, useValue: opts.rateLimit },
+        { provide: APP_GUARD, useClass: RateLimitGuard },
         { provide: LEDGER_REPO, useFactory: (p: Pool) => new PgLedgerRepo(p), inject: [POOL] },
         { provide: GROUP_STORE, useFactory: (p: Pool) => new GroupStore(p, opts.groupJoinLimit), inject: [POOL] },
         { provide: MPESA_STORE, useFactory: (p: Pool) => new MpesaStore(p), inject: [POOL] },

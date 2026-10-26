@@ -29,7 +29,11 @@ export function classifyRejection(status: number, message: string): Classified |
     return null;
   }
 
-  if (status === 429) return { type: 'otp_locked', severity: 'warning' };
+  if (status === 429) {
+    return m.includes('rate limit')
+      ? { type: 'rate_limited', severity: 'warning' }
+      : { type: 'otp_locked', severity: 'warning' };
+  }
 
   // The join-limit 409 has a distinctive message; other 409s are benign.
   if (status === 409 && /at most \d+ active group/.test(m)) {

@@ -97,6 +97,7 @@ describe('HTTP API (e2e)', () => {
           groupJoinLimit: 3,
           alert: new FakeAlertSink(),
           security: { alertWindowMs: 600_000, alertThreshold: 5 },
+          rateLimit: { enabled: false }, // the suite shares one IP; limiter is unit-tested
         }),
       ],
     }).compile();

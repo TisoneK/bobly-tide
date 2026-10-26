@@ -17,6 +17,17 @@ describe('classifyRejection', () => {
     expect(classifyRejection(403, 'source IP not allowed')).toEqual({ type: 'callback_rejected', severity: 'critical' });
   });
 
+  it('distinguishes rate limiting from OTP lockout on 429', () => {
+    expect(classifyRejection(429, 'rate limit exceeded; retry in 42s')).toEqual({
+      type: 'rate_limited',
+      severity: 'warning',
+    });
+    expect(classifyRejection(429, 'too many attempts; request a new code')).toEqual({
+      type: 'otp_locked',
+      severity: 'warning',
+    });
+  });
+
   it('maps OTP lockout and the join limit', () => {
     expect(classifyRejection(429, 'too many attempts')).toEqual({ type: 'otp_locked', severity: 'warning' });
     expect(classifyRejection(409, 'you can be in at most 3 active groups at a time')).toEqual({

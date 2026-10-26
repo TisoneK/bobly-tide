@@ -138,6 +138,7 @@ const app = await NestFactory.create(
       alertWindowMs: Number(env['SECURITY_ALERT_WINDOW_MS'] ?? 10 * 60_000),
       alertThreshold: Number(env['SECURITY_ALERT_THRESHOLD'] ?? 5),
     },
+    rateLimit: { enabled: env['RATE_LIMIT_ENABLED'] !== 'false' },
   }),
 );
 

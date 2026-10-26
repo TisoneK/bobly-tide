@@ -7,6 +7,7 @@ export type SecurityEventType =
   | 'ownership_denied'
   | 'callback_rejected'
   | 'otp_locked'
+  | 'rate_limited'
   | 'join_limit'
   | 'kyc_rejected'
   | 'anomaly_threshold';

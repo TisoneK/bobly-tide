@@ -20,7 +20,13 @@ export interface SecurityDeps {
 }
 
 /** Event types whose repetition from one source is itself suspicious. */
-const COUNTED: SecurityEventType[] = ['auth_failed', 'callback_rejected', 'ownership_denied', 'otp_locked'];
+const COUNTED: SecurityEventType[] = [
+  'auth_failed',
+  'callback_rejected',
+  'ownership_denied',
+  'otp_locked',
+  'rate_limited',
+];
 
 /**
  * Central recorder for the security audit trail (ADR-24). Every record is

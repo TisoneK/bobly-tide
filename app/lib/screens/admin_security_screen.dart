@@ -125,6 +125,7 @@ class _SecurityTabState extends ConsumerState<SecurityTab> {
         'ownership_denied' => 'Resource access denied',
         'callback_rejected' => 'Payment callback rejected',
         'otp_locked' => 'OTP locked out',
+        'rate_limited' => 'Rate limit exceeded',
         'join_limit' => 'Join limit hit',
         'kyc_rejected' => 'KYC rejected',
         'anomaly_threshold' => '⚠ Anomaly — repeated attempts',
