@@ -58,6 +58,8 @@ export interface AppModuleOptions {
   kyc: KycProvider;
   verification: VerificationConfig;
   admin: AdminConfig;
+  /** Max filling/active groups one user may be in at once (product spec §8.5). */
+  groupJoinLimit: number;
 }
 
 @Module({})
@@ -88,7 +90,7 @@ export class AppModule {
         { provide: VERIFICATION_CONFIG, useValue: opts.verification },
         { provide: ADMIN_CONFIG, useValue: opts.admin },
         { provide: LEDGER_REPO, useFactory: (p: Pool) => new PgLedgerRepo(p), inject: [POOL] },
-        { provide: GROUP_STORE, useFactory: (p: Pool) => new GroupStore(p), inject: [POOL] },
+        { provide: GROUP_STORE, useFactory: (p: Pool) => new GroupStore(p, opts.groupJoinLimit), inject: [POOL] },
         { provide: MPESA_STORE, useFactory: (p: Pool) => new MpesaStore(p), inject: [POOL] },
         { provide: AUTH_STORE, useFactory: (p: Pool) => new AuthStore(p), inject: [POOL] },
         { provide: VERIFICATION_STORE, useFactory: (p: Pool) => new VerificationStore(p), inject: [POOL] },

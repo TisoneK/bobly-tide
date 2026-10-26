@@ -71,6 +71,18 @@ export class AlreadyJoinedError extends Error {
     this.name = 'AlreadyJoinedError';
   }
 }
+/** The user is already in as many live groups at once as the pilot allows
+ *  (product spec §8.5 — fraud/abuse limit on concurrent memberships). */
+export class JoinLimitReachedError extends Error {
+  constructor(public readonly limit: number) {
+    super(`you can be in at most ${limit} active group${limit === 1 ? '' : 's'} at a time`);
+    this.name = 'JoinLimitReachedError';
+  }
+}
+
+/** Default cap on how many filling/active groups one account may be in at
+ *  once. Overridable via env (GROUP_JOIN_LIMIT); 0 or less disables the cap. */
+export const DEFAULT_MAX_ACTIVE_GROUPS = 3;
 
 /**
  * Postgres persistence for groups, members and their wallets. The money
@@ -78,7 +90,24 @@ export class AlreadyJoinedError extends Error {
  * structure the engine operates over.
  */
 export class GroupStore {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    /** Max filling/active groups one user may be in at once; ≤ 0 disables. */
+    private readonly maxActiveGroups: number = DEFAULT_MAX_ACTIVE_GROUPS,
+  ) {}
+
+  /** How many live groups (filling or active) the user is currently an active
+   *  member of — completed/left/dissolved memberships don't count. */
+  async countActiveMemberships(userId: string): Promise<number> {
+    if (!isUuid(userId)) return 0;
+    const res = await this.pool.query<{ c: number | string }>(
+      `SELECT count(*) AS c
+       FROM membership m JOIN "group" g ON g.id = m.group_id
+       WHERE m.user_id = $1 AND m.state = 'active' AND g.state IN ('filling', 'active')`,
+      [userId],
+    );
+    return Number(res.rows[0]?.c ?? 0);
+  }
 
   /** Insert the fixed Daily package row if it is not there yet. */
   async ensureDailyPackage(pkg: Package): Promise<void> {
@@ -116,6 +145,9 @@ export class GroupStore {
     }
     if (loaded.memberships.some((m) => m.userId === userId)) {
       throw new AlreadyJoinedError(groupId);
+    }
+    if (this.maxActiveGroups > 0 && (await this.countActiveMemberships(userId)) >= this.maxActiveGroups) {
+      throw new JoinLimitReachedError(this.maxActiveGroups);
     }
 
     const walletId = randomUUID();

@@ -119,6 +119,7 @@ const app = await NestFactory.create(
         (env['ADMIN_PHONES'] ?? '').split(',').map((s) => s.trim()).filter(Boolean),
       ),
     },
+    groupJoinLimit: Number(env['GROUP_JOIN_LIMIT'] ?? 3),
   }),
 );
 

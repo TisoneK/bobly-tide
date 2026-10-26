@@ -17,7 +17,7 @@ import {
   KycVendorNotConfiguredError,
   VerificationRequiredError,
 } from '../verification/verification.service';
-import { AlreadyJoinedError, GroupNotFoundError, GroupNotJoinableError } from './group.store';
+import { AlreadyJoinedError, GroupNotFoundError, GroupNotJoinableError, JoinLimitReachedError } from './group.store';
 
 /** Map a domain error to the right HTTP status. */
 export function toHttp(e: unknown): HttpException {
@@ -25,6 +25,7 @@ export function toHttp(e: unknown): HttpException {
   if (e instanceof GroupNotFoundError) return new NotFoundException(e.message);
   if (e instanceof GroupNotJoinableError) return new ConflictException(e.message);
   if (e instanceof AlreadyJoinedError) return new ConflictException(e.message);
+  if (e instanceof JoinLimitReachedError) return new ConflictException(e.message);
   if (e instanceof InsufficientFundsForHoldError) return new BadRequestException(e.message);
   if (e instanceof ShortfallError) return new BadRequestException(e.message);
   if (e instanceof InsufficientBalanceError) return new BadRequestException(e.message);

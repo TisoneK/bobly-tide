@@ -92,6 +92,7 @@ describe('HTTP API (e2e)', () => {
             maxAttempts: 5,
           },
           admin: { phones: new Set([ADMIN_PHONE]) },
+          groupJoinLimit: 3,
         }),
       ],
     }).compile();

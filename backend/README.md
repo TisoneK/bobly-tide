@@ -160,6 +160,15 @@ Admins are identified by phone (`ADMIN_PHONES`, no forgeable role claim); an
 review: list pending submissions and approve/reject them (resolving the
 `pending` state a real KYC vendor would otherwise leave).
 
+## Fraud & abuse limits (product spec §8.5, ADR-20)
+
+One account may be in at most `GROUP_JOIN_LIMIT` (default 3) **filling or
+active** groups at a time; the check sits in `createMembershipForUser` (the
+single chokepoint for both join routes), counting the user's `active`
+memberships in live groups — completed, left and dissolved ones free a slot,
+so renewing after a cycle is never blocked. Over the limit returns 409. Set
+`GROUP_JOIN_LIMIT=0` to disable.
+
 ## Gates & CI
 
 `backend/scripts/gate.sh` wires the suite into the ledger gates
@@ -243,8 +252,7 @@ callback** (ADR-8):
 
 ## Not built yet (next steps, build spec §14)
 
-- Per-user group-join limits (product spec §8.5); a proper admin UI (the
-  ops endpoints exist, the console UI does not).
+- A proper admin UI (the ops endpoints exist, the console UI does not).
 - The Flutter client runs against this API but is unverified (no SDK here);
   secure-storage for its token.
 - `HttpDarajaClient` is written to the Daraja spec but exercised only against
