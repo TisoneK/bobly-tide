@@ -45,6 +45,47 @@ class LeaveResult {
       );
 }
 
+/// A signed KYC vendor job (POST /verification/kyc/authorize). The on-device
+/// Smile ID SDK uses this to upload the selfie/ID and run liveness straight to
+/// the vendor; the backend resolves the result via its callback.
+class KycUploadAuth {
+  final String jobId;
+  final String userId;
+  final String kind;
+  final String partnerId;
+  final String timestamp;
+  final String signature;
+  final String callbackUrl;
+  final String baseUrl;
+  final String product; // e.g. 'biometric_kyc' | 'doc_verification'
+  const KycUploadAuth({
+    required this.jobId,
+    required this.userId,
+    required this.kind,
+    required this.partnerId,
+    required this.timestamp,
+    required this.signature,
+    required this.callbackUrl,
+    required this.baseUrl,
+    required this.product,
+  });
+
+  /// Smile ID's sandbox host carries "testapi"; anything else is production.
+  bool get useSandbox => baseUrl.contains('testapi');
+
+  factory KycUploadAuth.fromJson(Map<String, dynamic> j) => KycUploadAuth(
+        jobId: j['jobId'] as String,
+        userId: j['userId'] as String,
+        kind: j['kind'] as String,
+        partnerId: j['partnerId'] as String,
+        timestamp: j['timestamp'] as String,
+        signature: j['signature'] as String,
+        callbackUrl: j['callbackUrl'] as String,
+        baseUrl: j['baseUrl'] as String,
+        product: j['product'] as String,
+      );
+}
+
 /// A pending KYC submission in the ops review queue (GET /admin/verifications).
 class PendingVerification {
   final String userId;

@@ -22,22 +22,33 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000   # Android emulator
 Point `API_BASE_URL` at the backend. An Android emulator reaches the host
 machine at `10.0.2.2`; an iOS simulator at `localhost`.
 
-### Camera permission (KYC capture)
+### KYC capture — Smile ID SDK (ADR-19)
 
-The ID/face KYC steps use the **live camera** via `image_picker` (ADR-16 —
-never the gallery). `flutter create .` regenerates the platform folders, so
-after generating them add the camera usage string that iOS requires, or the
-capture sheet is blocked:
+The ID/face steps run on-device through the **Smile ID Flutter SDK**
+(`smile_id`): it captures the selfie/document, runs liveness, and uploads
+straight to the vendor using a signed job from `POST /verification/kyc/authorize`
+— images never pass through our server, and never come from the gallery. The
+SDK is initialized once in `main.dart` (`SmileID.initialize(useSandbox: …)`,
+`--dart-define=SMILE_SANDBOX=false` for production).
+
+Because the SDK embeds its own camera preview, both platforms need the camera
+permission after `flutter create .` regenerates the platform folders:
 
 - **iOS** — in `ios/Runner/Info.plist`:
   ```xml
   <key>NSCameraUsageDescription</key>
   <string>Bobly Tide uses the camera to verify your ID and face.</string>
   ```
-- **Android** — `image_picker` launches the system camera via intent, so no
-  manifest permission is needed for capture. (Add
-  `<uses-permission android:name="android.permission.CAMERA"/>` only if a
-  future build embeds a preview rather than the system camera.)
+- **Android** — in `android/app/src/main/AndroidManifest.xml`:
+  ```xml
+  <uses-permission android:name="android.permission.CAMERA"/>
+  ```
+
+> The `smile_id` version in `pubspec.yaml` is a placeholder — confirm the exact
+> published version with `flutter pub add smile_id`, and verify the SDK call
+> site in `lib/kyc/smile_kyc.dart` against it (that file is the only place the
+> vendor SDK is used). The backend must have `SMILE_PARTNER_ID` + `SMILE_API_KEY`
+> set for `/verification/kyc/authorize` to issue live jobs.
 
 ## Layout
 
@@ -57,10 +68,11 @@ lib/widgets/             formatting + shared UI helpers
 1. **Sign in** — enter M-Pesa number → `POST /auth/otp/request`.
 2. **OTP** — enter the 6-digit code → `POST /auth/otp/verify` → session token
    (held in memory for the pilot).
-3. **Verify** — before joining or moving money, confirm email (a code), take
-   a **live camera** photo of your ID and a selfie (with a liveness prompt),
-   and submit proof of address; all are reviewed by ops / a KYC provider.
-   Home shows a "Verify to join" card until all items pass.
+3. **Verify** — before joining or moving money, confirm email (a code), run the
+   **Smile ID** on-device ID + selfie/liveness checks (see the KYC capture note
+   above), and submit proof of address. Smile ID resolves the ID/face items via
+   the backend callback; ops review covers exceptions. Home shows a "Verify to
+   join" card until all items pass.
 4. **Home** — the Daily package, and a one-tap **Join** (`POST
    /packages/daily/join`, verified members only); the server puts you in the
    next forming group and ties the membership to your account.
@@ -75,10 +87,10 @@ lib/widgets/             formatting + shared UI helpers
 
 - The session token is kept in memory only — add secure storage so it
   survives app restarts.
-- KYC capture is camera-first but there is **no asset-upload pipeline or
-  liveness vendor** yet: the capture is confirmed locally and a reference is
-  sent to `/verification/submit` for ops review. A real build streams the
-  image + liveness result to a KYC provider. The on-screen liveness prompt is
-  guidance, not detection.
+- KYC ID/face capture runs through the **Smile ID SDK** (`lib/kyc/smile_kyc.dart`),
+  but the app is uncompiled here: the `smile_id` version is a placeholder and
+  the SDK call site is written to the published API — both need confirming on a
+  machine with Flutter + the package. Proof-of-address is still a plain
+  reference submit (not a Smile product).
 - No push/SMS notifications, no switch-package UI, no offline cache — out of
   scope for the pilot slice (build spec §2.2). (Renew/leave are wired.)

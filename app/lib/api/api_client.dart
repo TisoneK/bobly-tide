@@ -37,6 +37,12 @@ class ApiClient {
   Future<void> submitKyc(String kind, String reference) =>
       _post('/verification/submit', {'kind': kind, 'reference': reference});
 
+  /// Authorize an on-device KYC capture (selfie/ID + liveness) with the vendor.
+  /// Returns the signed job the Smile ID SDK runs; the backend resolves the
+  /// result via its callback.
+  Future<KycUploadAuth> authorizeKyc(String kind) async =>
+      KycUploadAuth.fromJson(await _post('/verification/kyc/authorize', {'kind': kind}));
+
   Future<void> setProfile(String displayName) => _post('/auth/profile', {'displayName': displayName});
 
   // --- groups / wallets (require a token) ---

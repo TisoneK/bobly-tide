@@ -61,12 +61,13 @@ Tracks the member-app review against the spec. The app lives in
   `GET /admin/verifications`, approve/reject via the review endpoint; reached
   from the home menu, shows an "ops only" state for non-admins (403)
 - [ ] Estimated start time on the queue (needs fill-rate data)
-- [x] ID-document & face capture (`kyc_capture_screen.dart`) — live camera
-  only (`ImageSource.camera`, never `.gallery`; ADR-16): ID = rear-camera
-  document photo, face = front-camera selfie with a liveness prompt, then a
-  preview → retake / submit. Reached from the Verify screen. Still a
-  reference stand-in to `/verification/submit` — **no asset-upload pipeline
-  or liveness vendor yet** (follow-up); email/address stay typed.
+- [x] ID-document & face capture (`kyc_capture_screen.dart` + `kyc/smile_kyc.dart`)
+  — on-device **Smile ID SDK** (ADR-19, superseding the ADR-17 image_picker
+  stand-in): authorize via `POST /verification/kyc/authorize`, then the SDK
+  captures + runs liveness + uploads to the vendor (images never hit our
+  server); Smile resolves via the backend callback. Reached from the Verify
+  screen. Uncompiled here — `smile_id` version + SDK call site need confirming;
+  email/address stay typed.
 
 > Built but, like the rest of the app, not compiled here (no Flutter SDK).
 > Switch-package is a placeholder (Daily is the only pilot package); renew

@@ -12,7 +12,10 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^2.5.1
   http: ^1.2.2
-  image_picker: ^1.1.2 # live camera capture for KYC (ID / face)
+  # On-device KYC: Smile ID runs the selfie/ID capture + liveness and uploads
+  # straight to the vendor (ADR-19). Confirm the exact published version with
+  # `flutter pub add smile_id` on a machine with the SDK before building.
+  smile_id: ^10.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,21 +1,21 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../kyc/smile_kyc.dart';
+import '../models.dart';
 import '../state/providers.dart';
 import '../theme.dart';
 import '../widgets/ui.dart';
 
-/// Live-camera KYC capture for the ID document and the face/selfie steps
-/// (ADR-16: capture is always the device camera, never a gallery pick).
+/// On-device KYC capture for the ID document and face/selfie steps, run by the
+/// Smile ID SDK (ADR-19, superseding the image_picker stand-in in ADR-17).
 ///
-/// The pilot has no asset-upload pipeline or liveness vendor yet, so this
-/// captures locally, shows a preview to confirm, and submits a *reference*
-/// marking a live capture to the existing `/verification/submit` endpoint.
-/// A real build streams the image/liveness result to a KYC provider; the
-/// on-screen liveness prompt here is guidance, not detection.
+/// The flow: fetch a signed vendor job from the backend
+/// (`POST /verification/kyc/authorize`), then hand it to the Smile ID SDK,
+/// which captures the selfie/document and runs liveness on-device and uploads
+/// straight to the vendor — the images never pass through our server. Smile ID
+/// resolves the result asynchronously via the backend callback, so this screen
+/// only has to launch the flow and report that it was submitted.
 class KycCaptureScreen extends ConsumerStatefulWidget {
   /// 'id' (document) or 'face' (selfie).
   final String kind;
@@ -28,9 +28,7 @@ class KycCaptureScreen extends ConsumerStatefulWidget {
 }
 
 class _KycCaptureScreenState extends ConsumerState<KycCaptureScreen> {
-  final _picker = ImagePicker();
-  XFile? _shot;
-  bool _submitting = false;
+  late Future<KycUploadAuth> _auth;
 
   String get _title => widget.isFace ? 'Face check' : 'ID document';
 
@@ -38,7 +36,7 @@ class _KycCaptureScreenState extends ConsumerState<KycCaptureScreen> {
       ? const [
           'Hold the phone at eye level in good light.',
           'Fit your whole face in the frame — no hat or sunglasses.',
-          'Look straight at the camera, then blink once.',
+          'Follow the on-screen prompts: look straight, then blink.',
         ]
       : const [
           'Use your national ID or passport.',
@@ -46,37 +44,35 @@ class _KycCaptureScreenState extends ConsumerState<KycCaptureScreen> {
           'Keep it sharp and glare-free — all text readable.',
         ];
 
-  Future<void> _capture() async {
-    try {
-      final shot = await _picker.pickImage(
-        source: ImageSource.camera, // camera only — never gallery (ADR-16)
-        preferredCameraDevice: widget.isFace ? CameraDevice.front : CameraDevice.rear,
-        imageQuality: 85,
-        maxWidth: 1600,
-      );
-      if (shot != null && mounted) setState(() => _shot = shot);
-    } catch (e) {
-      // Permission denied or no camera available on the device.
-      if (mounted) showError(context, e);
-    }
+  @override
+  void initState() {
+    super.initState();
+    _auth = ref.read(apiClientProvider).authorizeKyc(widget.kind);
   }
 
-  Future<void> _submit() async {
-    final shot = _shot;
-    if (shot == null) return;
-    setState(() => _submitting = true);
-    try {
-      // No upload pipeline yet: send a reference that marks a genuine live
-      // capture (filename + timestamp) so ops can see it was camera-sourced.
-      final reference = 'camera:${widget.kind}:${shot.name}@${DateTime.now().toUtc().toIso8601String()}';
-      await ref.read(apiClientProvider).submitKyc(widget.kind, reference);
-      if (!mounted) return;
-      showInfo(context, 'Submitted for review');
+  void _retryAuth() {
+    setState(() => _auth = ref.read(apiClientProvider).authorizeKyc(widget.kind));
+  }
+
+  /// Launch the Smile ID capture flow full-screen and act on its outcome.
+  Future<void> _start(KycUploadAuth auth) async {
+    final ok = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          appBar: AppBar(title: Text(_title)),
+          body: smileKycFlow(
+            auth: auth,
+            onDone: (success, _) => Navigator.of(ctx).pop(success),
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (ok == true) {
+      showInfo(context, 'Submitted — we’ll confirm your verification shortly.');
       Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) showError(context, e);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+    } else if (ok == false) {
+      showError(context, 'Verification was not completed. Please try again.');
     }
   }
 
@@ -84,41 +80,38 @@ class _KycCaptureScreenState extends ConsumerState<KycCaptureScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(_title)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _guidanceCard(),
-          const SizedBox(height: 16),
-          _frame(),
-          const SizedBox(height: 16),
-          if (_shot == null)
-            FilledButton.icon(
-              onPressed: _submitting ? null : _capture,
-              icon: const Icon(Icons.photo_camera_outlined),
-              label: Text(widget.isFace ? 'Open camera for selfie' : 'Open camera'),
-            )
-          else ...[
-            FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Looks good — submit'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _submitting ? null : _capture,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retake'),
-            ),
-          ],
-          const SizedBox(height: 12),
-          const Text(
-            'Your capture goes to our team for review. We never pull photos from '
-            'your gallery — only a fresh camera shot counts.',
-            style: TextStyle(color: BoblyColors.slate, fontSize: 12),
-          ),
-        ],
+      body: FutureBuilder<KycUploadAuth>(
+        future: _auth,
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snap.hasError) return ErrorRetry(error: snap.error!, onRetry: _retryAuth);
+          return _content(snap.data!);
+        },
       ),
+    );
+  }
+
+  Widget _content(KycUploadAuth auth) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _guidanceCard(),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () => _start(auth),
+          icon: const Icon(Icons.photo_camera_outlined),
+          label: Text(widget.isFace ? 'Start face check' : 'Scan my ID'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Capture runs on your device and goes straight to our verification '
+          'partner — the photo never passes through Bobly Tide, and we never '
+          'use images from your gallery.',
+          style: TextStyle(color: BoblyColors.slate, fontSize: 12),
+        ),
+      ],
     );
   }
 
@@ -150,38 +143,6 @@ class _KycCaptureScreenState extends ConsumerState<KycCaptureScreen> {
                 )),
           ],
         ),
-      ),
-    );
-  }
-
-  /// A framed preview — an oval guide for the face step, a card outline for ID.
-  Widget _frame() {
-    final shot = _shot;
-    final border = widget.isFace ? null : BorderRadius.circular(12);
-    final shape = widget.isFace ? BoxShape.circle : BoxShape.rectangle;
-    return Center(
-      child: Container(
-        width: widget.isFace ? 220 : double.infinity,
-        height: widget.isFace ? 220 : 210,
-        decoration: BoxDecoration(
-          color: BoblyColors.mist.withOpacity(0.4),
-          shape: shape,
-          borderRadius: border,
-          border: Border.all(color: BoblyColors.mist, width: 2),
-          image: shot != null
-              ? DecorationImage(image: FileImage(File(shot.path)), fit: BoxFit.cover)
-              : null,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: shot != null
-            ? null
-            : Center(
-                child: Icon(
-                  widget.isFace ? Icons.face_retouching_natural_outlined : Icons.credit_card_outlined,
-                  size: 56,
-                  color: BoblyColors.slate,
-                ),
-              ),
       ),
     );
   }

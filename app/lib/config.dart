@@ -7,3 +7,7 @@ const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://localhost:3000',
 );
+
+/// Run the Smile ID KYC SDK against the sandbox (default) or production.
+///   flutter run --dart-define=SMILE_SANDBOX=false
+const bool smileSandbox = bool.fromEnvironment('SMILE_SANDBOX', defaultValue: true);
